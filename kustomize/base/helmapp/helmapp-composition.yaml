@@ -72,6 +72,15 @@ spec:
                     {{ $key }}: {{ toJson $value }}
                     {{- end }}
                     {{- end }}
+                    # Duplicate eks fields, if any, at top level for easier access
+                    {{- if (index $env "eks") }}
+                    {{- $eks := index $env "eks" }}
+                    {{- if (typeOf $eks | contains "map") }}
+                    {{- range $eksKey, $eksValue := $eks }}
+                    {{ $eksKey }}: {{ toJson $eksValue }}
+                    {{- end }}
+                    {{- end }}
+                    {{- end }}
                   {{- end }}
             destination:
               server: https://kubernetes.default.svc
