@@ -1,0 +1,91 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: helmapp-argocd
+  namespace: crossplane-system
+spec:
+  # Reference to the XRD
+  compositeTypeRef:
+    apiVersion: dip.io/v1alpha1
+    kind: HelmApp
+  
+  mode: Pipeline
+  
+  pipeline:
+  # NOTE: EnvironmentConfigs need labels to use selectors
+  # For now, using hardcoded reference until labels are added to EnvironmentConfigs
+  # To use selectors: kubectl label environmentconfig hsp-addons environment=hsp-addons
+  - step: load-environment-configs
+    functionRef:
+      name: function-environment-configs
+    input:
+      apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+      kind: Input
+      spec:
+        environmentConfigs:
+        - type: Reference
+          ref:
+            name: hsp-addons
+  
+  - step: render-argocd-app
+    functionRef:
+      name: function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            namespace: {{ .observed.composite.resource.metadata.namespace }}
+            name: {{ .observed.composite.resource.metadata.name }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: argocd-app
+            finalizers:
+            - resources-finalizer.argocd.argoproj.io
+          spec:
+            project: {{ default "default" .observed.composite.resource.spec.project }}
+            source:
+              repoURL: {{ .observed.composite.resource.spec.repoURL }}
+              targetRevision: {{ .observed.composite.resource.spec.targetRevision }}
+              {{- if and .observed.composite.resource.spec.chartName (not (hasPrefix "oci://" .observed.composite.resource.spec.repoURL)) }}
+              chart: {{ .observed.composite.resource.spec.chartName }}
+              {{- end }}
+              {{- if .observed.composite.resource.spec.path }}
+              path: {{ .observed.composite.resource.spec.path }}
+              {{- end }}
+              helm:
+                releaseName: {{ .observed.composite.resource.metadata.name }}
+                valuesObject:
+                  {{- if .observed.composite.resource.spec.valuesObject }}
+                  {{- range $key, $value := .observed.composite.resource.spec.valuesObject }}
+                  {{ $key }}: {{ toJson $value }}
+                  {{- end }}
+                  {{- end }}
+                  {{- if (index .context "apiextensions.crossplane.io/environment") }}
+                  {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+                  environmentConfig:
+                    {{- range $key, $value := $env }}
+                    {{- if and (ne $key "apiVersion") (ne $key "kind") }}
+                    {{ $key }}: {{ toJson $value }}
+                    {{- end }}
+                    {{- end }}
+                  {{- end }}
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: {{ .observed.composite.resource.metadata.namespace }}
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+              syncOptions:
+              - CreateNamespace=true
+  
+  # NOTE: function-auto-ready cannot detect ArgoCD Application health status
+  # because it uses custom .status.health.status field instead of standard Kubernetes conditions
+  # Tracking issue: https://github.com/crossplane-contrib/function-auto-ready/issues/29
+  - step: auto-ready
+    functionRef:
+      name: function-auto-ready

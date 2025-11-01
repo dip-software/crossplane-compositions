@@ -1,0 +1,84 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: helmapps.dip.io
+spec:
+  group: dip.io
+  names:
+    kind: HelmApp
+    plural: helmapps
+  # Namespace scope - compositions will be namespace-scoped
+  scope: Namespaced
+  
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              # Chart name (e.g., "my-chart")
+              chartName:
+                type: string
+                description: "Name of the Helm chart to deploy"
+              
+              # Chart repository URL
+              repoURL:
+                type: string
+                description: "URL of the Helm chart repository"
+              
+              # Chart version/revision
+              targetRevision:
+                type: string
+                description: "Target revision (version) of the Helm chart"
+              
+              # Optional path within the repository
+              path:
+                type: string
+                description: "Optional path to the chart within the repository"
+              
+              # Helm values as an object
+              valuesObject:
+                type: object
+                description: "Helm chart values as key-value pairs"
+                x-kubernetes-preserve-unknown-fields: true
+                additionalProperties: true
+              
+              # Environment reference
+              environment:
+                type: string
+                description: "Reference to a Crossplane EnvironmentConfig"
+              
+              # ArgoCD project name
+              project:
+                type: string
+                description: "ArgoCD project name (defaults to 'default')"
+                default: "default"
+            
+            required:
+            - repoURL
+            - targetRevision
+            - environment
+          
+          status:
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string
