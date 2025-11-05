@@ -46,7 +46,6 @@ spec:
                 type: object
                 description: "Helm chart values as key-value pairs"
                 x-kubernetes-preserve-unknown-fields: true
-                additionalProperties: true
               
               # Environment reference
               environment:
