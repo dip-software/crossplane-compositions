@@ -4,21 +4,21 @@ This repository contains Crossplane v2 compositions for deploying applications v
 
 ## Overview
 
-The `HelmApp` is a namespace-scoped Crossplane resource that creates an Argo CD `Application` resource to deploy Helm charts with dynamic configuration. 
+The `HelmApplication` is a namespace-scoped Crossplane resource that creates an Argo CD `Application` resource to deploy Helm charts with dynamic configuration. 
 
 ### Features
 
 - **Namespace Scoped**: The composition operates within specific namespaces, not cluster-wide
 - **Helm Chart Deployment**: Deploys any Helm chart from a specified repository
 - **Environment Configuration**: Integrates with Crossplane `EnvironmentConfig` to inject environment-specific values
-- **Dynamic Values**: Supports flexible value injection through `valuesObject` and `environmentConfig`
+- **Dynamic Values**: Supports flexible value injection through `helm.valuesObject` and `environmentConfig`
 - **Crossplane v2**: Uses modern Crossplane v2 APIs without claim/composite separation
 
 ## Components
 
 ### 1. CompositeResourceDefinition (XRD) - `helmapp-xrd.yaml`
 
-Defines the `HelmApp` resource with the following inputs:
+Defines the `HelmApplication` resource with the following inputs:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -26,8 +26,8 @@ Defines the `HelmApp` resource with the following inputs:
 | `repoURL` | string | Yes | URL of the Helm chart repository (supports `https://` and `oci://`) |
 | `targetRevision` | string | Yes | Chart version/revision to deploy |
 | `path` | string | No | Optional path to the chart within the repository |
-| `valuesObject` | object | No | Helm chart values as key-value pairs |
-| `environment` | string | Yes | Reference to a Crossplane `EnvironmentConfig` |
+| `helm.valuesObject` | object | No | Helm chart values as key-value pairs |
+| `withConfigKeys` | array | No | Optional array of string prefixes to filter which environmentConfigs to include |
 | `project` | string | No | Argo CD project name (defaults to "default") |
 
 ### 2. Composition - `helmapp-composition.yaml`
@@ -36,7 +36,7 @@ Implements the XRD by creating an Argo CD `Application` resource. The compositio
 
 - Maps all XRD inputs to the Argo CD Application spec
 - References an `EnvironmentConfig` to inject environment-specific values
-- Merges `valuesObject` with `environmentConfig` in the Helm values
+- Merges `helm.valuesObject` with `environmentConfig` in the Helm values
 - Sets up automated sync policies for Argo CD
 - Supports both traditional Helm repositories and OCI registries
 - Conditionally sets `spec.chart` only for non-OCI repositories
@@ -76,11 +76,11 @@ kubectl apply -k kustomize/base/helmapp
 ```
 
 This deploys:
-- The XRD for `HelmApp`
+- The XRD for `HelmApplication`
 - The composition
 - Argo CD RBAC permissions
 
-### Create a HelmApp Resource
+### Create a HelmApplication Resource
 
 Create a namespace-scoped resource to deploy an application.
 
@@ -88,7 +88,7 @@ Create a namespace-scoped resource to deploy an application.
 
 ```yaml
 apiVersion: dip.io/v1alpha1
-kind: HelmApp
+kind: HelmApplication
 metadata:
   name: my-app
   namespace: default
@@ -98,19 +98,18 @@ spec:
   targetRevision: "1.0.0"
   project: "default"
   
-  valuesObject:
-    replicas: 3
-    image:
-      tag: "latest"
-  
-  environment: "hsp-addons"
+  helm:
+    valuesObject:
+      replicas: 3
+      image:
+        tag: "latest"
 ```
 
 **Example 2: OCI Registry (no chartName needed)**
 
 ```yaml
 apiVersion: dip.io/v1alpha1
-kind: HelmApp
+kind: HelmApplication
 metadata:
   name: go-hello-world
   namespace: starlift-observability
@@ -119,21 +118,20 @@ spec:
   targetRevision: "0.12.0"
   project: "starlift-observability"
   
-  valuesObject:
-    replicaCount: 2
-    serviceType: "LoadBalancer"
-  
-  environment: "hsp-addons"
+  helm:
+    valuesObject:
+      replicaCount: 2
+      serviceType: "LoadBalancer"
 ```
 
 ### Verify the Argo CD Application
 
 ```bash
-# List all HelmApp resources
-kubectl get helmapp -A
+# List all HelmApplication resources
+kubectl get helmapplication -A
 
 # Describe a specific resource
-kubectl describe helmapp my-app -n default
+kubectl describe helmapplication my-app -n default
 
 # Check the created Argo CD Application
 kubectl get applications -n <namespace>
@@ -142,7 +140,7 @@ kubectl get applications -n <namespace>
 ## Architecture
 
 ```
-HelmApp (namespace-scoped)
+HelmApplication (namespace-scoped)
     ↓
 Composition (Pipeline Mode)
     ↓
@@ -160,10 +158,11 @@ Helm Chart Deployment
 The composition automatically merges environment-specific values:
 
 ```yaml
-# Input valuesObject
-valuesObject:
-  replicas: 3
-  image: myimage:1.0.0
+# Input helm.valuesObject
+helm:
+  valuesObject:
+    replicas: 3
+    image: myimage:1.0.0
 
 # EnvironmentConfig data
 resourcePrefix: "dip"
@@ -186,6 +185,9 @@ spec:
   repoURL: "https://charts.example.com"
   chartName: "my-chart"
   targetRevision: "1.0.0"
+  helm:
+    valuesObject:
+      key: value
 ```
 
 ### OCI Registries
@@ -196,20 +198,23 @@ For OCI registries, the chart reference is included in the `repoURL`. Do not spe
 spec:
   repoURL: "oci://ghcr.io/owner/charts/chart-name"
   targetRevision: "1.0.0"
+  helm:
+    valuesObject:
+      key: value
 ```
 
 ## Group Reference
 
 - **Group**: `dip.io`
-- **Kind**: `HelmApp`
+- **Kind**: `HelmApplication`
 - **Scope**: Namespaced
 - **API Version**: `v1alpha1`
 
 ## Resources Created
 
-When a `HelmApp` resource is created, the composition automatically creates:
+When a `HelmApplication` resource is created, the composition automatically creates:
 
-1. **Argo CD Application** (in the same namespace as the `HelmApp`)
+1. **Argo CD Application** (in the same namespace as the `HelmApplication`)
    - Syncs the Helm chart
    - Applies automated sync policies (prune, selfHeal)
    - Targets the cluster's Kubernetes service endpoint
@@ -219,7 +224,7 @@ When a `HelmApp` resource is created, the composition automatically creates:
 
 - The Argo CD controller must be installed and running in the cluster
 - Helm charts must be accessible from the specified `repoURL`
-- Argo CD Applications are created in the same namespace as the `HelmApp` resource
+- Argo CD Applications are created in the same namespace as the `HelmApplication` resource
 - EnvironmentConfig references are resolved by Crossplane at composition time
 - The composition uses Crossplane Pipeline mode with function-go-templating
 - For OCI registries, omit the `chartName` field as the chart is specified in the `repoURL`

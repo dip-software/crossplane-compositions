@@ -1,13 +1,13 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: helmapp-argocd
+  name: helmapplication-argocd
   namespace: crossplane-system
 spec:
   # Reference to the XRD
   compositeTypeRef:
     apiVersion: dip.io/v1alpha1
-    kind: HelmApp
+    kind: HelmApplication
   
   mode: Pipeline
   
@@ -64,8 +64,8 @@ spec:
               helm:
                 releaseName: {{ .observed.composite.resource.metadata.name }}
                 valuesObject:
-                  {{- if .observed.composite.resource.spec.valuesObject }}
-                  {{- range $key, $value := .observed.composite.resource.spec.valuesObject }}
+                  {{- if .observed.composite.resource.spec.helm.valuesObject }}
+                  {{- range $key, $value := .observed.composite.resource.spec.helm.valuesObject }}
                   {{ $key }}: {{ toJson $value }}
                   {{- end }}
                   {{- end }}

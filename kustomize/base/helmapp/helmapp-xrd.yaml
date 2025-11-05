@@ -1,12 +1,12 @@
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
-  name: helmapps.dip.io
+  name: helmapplications.dip.io
 spec:
   group: dip.io
   names:
-    kind: HelmApp
-    plural: helmapps
+    kind: HelmApplication
+    plural: helmapplications
   # Namespace scope - compositions will be namespace-scoped
   scope: Namespaced
   
@@ -41,11 +41,16 @@ spec:
                 type: string
                 description: "Optional path to the chart within the repository"
               
-              # Helm values as an object
-              valuesObject:
+              # Helm configuration
+              helm:
                 type: object
-                description: "Helm chart values as key-value pairs"
-                x-kubernetes-preserve-unknown-fields: true
+                description: "Helm configuration"
+                properties:
+                  # Helm values as an object
+                  valuesObject:
+                    type: object
+                    description: "Helm chart values as key-value pairs"
+                    x-kubernetes-preserve-unknown-fields: true
               
               # Optional array of prefixes to filter environmentConfigs
               withConfigKeys:
