@@ -47,10 +47,12 @@ spec:
                 description: "Helm chart values as key-value pairs"
                 x-kubernetes-preserve-unknown-fields: true
               
-              # Environment reference
-              environment:
-                type: string
-                description: "Reference to a Crossplane EnvironmentConfig"
+              # Optional array of prefixes to filter environmentConfigs
+              withConfigKeys:
+                type: array
+                description: "Optional array of string prefixes to filter which environmentConfigs to include. If empty or not provided, all environmentConfigs are included."
+                items:
+                  type: string
               
               # ArgoCD project name
               project:
@@ -61,7 +63,6 @@ spec:
             required:
             - repoURL
             - targetRevision
-            - environment
           
           status:
             type: object

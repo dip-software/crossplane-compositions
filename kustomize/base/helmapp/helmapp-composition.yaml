@@ -12,9 +12,7 @@ spec:
   mode: Pipeline
   
   pipeline:
-  # NOTE: EnvironmentConfigs need labels to use selectors
-  # For now, using hardcoded reference until labels are added to EnvironmentConfigs
-  # To use selectors: kubectl label environmentconfig hsp-addons environment=hsp-addons
+  # Load all EnvironmentConfigs using Selector with Multiple mode
   - step: load-environment-configs
     functionRef:
       name: function-environment-configs
@@ -26,6 +24,13 @@ spec:
         - type: Reference
           ref:
             name: hsp-addons
+        - type: Selector
+          selector:
+            mode: Multiple
+            matchLabels:
+              - key: config
+                type: Value
+                value: hsp-addons
   
   - step: render-argocd-app
     functionRef:
@@ -66,10 +71,22 @@ spec:
                   {{- end }}
                   {{- if (index .context "apiextensions.crossplane.io/environment") }}
                   {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+                  {{- $prefixes := .observed.composite.resource.spec.withConfigKeys }}
                   environmentConfig:
                     {{- range $key, $value := $env }}
                     {{- if and (ne $key "apiVersion") (ne $key "kind") }}
+                    {{- $includeKey := true }}
+                    {{- if $prefixes }}
+                    {{- $includeKey = false }}
+                    {{- range $prefix := $prefixes }}
+                    {{- if hasPrefix $prefix $key }}
+                    {{- $includeKey = true }}
+                    {{- end }}
+                    {{- end }}
+                    {{- end }}
+                    {{- if $includeKey }}
                     {{ $key }}: {{ toJson $value }}
+                    {{- end }}
                     {{- end }}
                     {{- end }}
                     # Duplicate eks fields, if any, at top level for easier access
