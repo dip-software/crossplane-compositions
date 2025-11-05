@@ -71,20 +71,50 @@ spec:
                   {{- end }}
                   {{- if (index .context "apiextensions.crossplane.io/environment") }}
                   {{- $env := index .context "apiextensions.crossplane.io/environment" }}
-                  {{- $prefixes := .observed.composite.resource.spec.withConfigKeys }}
+                  {{- $filterKeys := .observed.composite.resource.spec.withConfigKeys }}
                   environmentConfig:
+                    {{- if $filterKeys }}
+                    {{- /* Build filtered config based on exact and nested key matches */ -}}
+                    {{- range $filterKey := $filterKeys }}
+                    {{- if contains "." $filterKey }}
+                    {{- /* Handle nested key like "eks.clusterName" */ -}}
+                    {{- $parts := splitList "." $filterKey }}
+                    {{- $topKey := index $parts 0 }}
+                    {{- $nestedPath := join "." (rest $parts) }}
+                    {{- if (index $env $topKey) }}
+                    {{- $topValue := index $env $topKey }}
+                    {{- if (typeOf $topValue | contains "map") }}
+                    {{- /* Navigate to nested value */ -}}
+                    {{- $currentValue := $topValue }}
+                    {{- $pathParts := splitList "." $nestedPath }}
+                    {{- $found := true }}
+                    {{- range $pathPart := $pathParts }}
+                    {{- if and $found (typeOf $currentValue | contains "map") }}
+                    {{- if (index $currentValue $pathPart) }}
+                    {{- $currentValue = index $currentValue $pathPart }}
+                    {{- else }}
+                    {{- $found = false }}
+                    {{- end }}
+                    {{- else }}
+                    {{- $found = false }}
+                    {{- end }}
+                    {{- end }}
+                    {{- if $found }}
+                    {{ $nestedPath }}: {{ toJson $currentValue }}
+                    {{- end }}
+                    {{- end }}
+                    {{- end }}
+                    {{- else }}
+                    {{- /* Handle exact top-level key */ -}}
+                    {{- if and (index $env $filterKey) (ne $filterKey "apiVersion") (ne $filterKey "kind") }}
+                    {{ $filterKey }}: {{ toJson (index $env $filterKey) }}
+                    {{- end }}
+                    {{- end }}
+                    {{- end }}
+                    {{- else }}
+                    {{- /* No filter - include all keys */ -}}
                     {{- range $key, $value := $env }}
                     {{- if and (ne $key "apiVersion") (ne $key "kind") }}
-                    {{- $includeKey := true }}
-                    {{- if $prefixes }}
-                    {{- $includeKey = false }}
-                    {{- range $prefix := $prefixes }}
-                    {{- if hasPrefix $prefix $key }}
-                    {{- $includeKey = true }}
-                    {{- end }}
-                    {{- end }}
-                    {{- end }}
-                    {{- if $includeKey }}
                     {{ $key }}: {{ toJson $value }}
                     {{- end }}
                     {{- end }}
@@ -93,8 +123,34 @@ spec:
                     {{- if (index $env "eks") }}
                     {{- $eks := index $env "eks" }}
                     {{- if (typeOf $eks | contains "map") }}
+                    {{- if $filterKeys }}
+                    {{- /* Apply filtering to eks fields - check if filter keys exist in eks object */ -}}
+                    {{- $includeAllEks := false }}
+                    {{- $eksFieldsToInclude := list }}
+                    {{- range $filterKey := $filterKeys }}
+                    {{- if eq $filterKey "eks" }}
+                    {{- $includeAllEks = true }}
+                    {{- else if (index $eks $filterKey) }}
+                    {{- /* Filter key matches an eks field directly */ -}}
+                    {{- $eksFieldsToInclude = append $eksFieldsToInclude $filterKey }}
+                    {{- end }}
+                    {{- end }}
+                    {{- if $includeAllEks }}
+                    {{- /* Include all eks fields */ -}}
                     {{- range $eksKey, $eksValue := $eks }}
                     {{ $eksKey }}: {{ toJson $eksValue }}
+                    {{- end }}
+                    {{- else if $eksFieldsToInclude }}
+                    {{- /* Include only specific eks fields */ -}}
+                    {{- range $eksField := $eksFieldsToInclude }}
+                    {{ $eksField }}: {{ toJson (index $eks $eksField) }}
+                    {{- end }}
+                    {{- end }}
+                    {{- else }}
+                    {{- /* No filter - include all eks fields */ -}}
+                    {{- range $eksKey, $eksValue := $eks }}
+                    {{ $eksKey }}: {{ toJson $eksValue }}
+                    {{- end }}
                     {{- end }}
                     {{- end }}
                     {{- end }}
