@@ -48,6 +48,9 @@ spec:
             name: {{ .observed.composite.resource.metadata.name }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: argocd-app
+              {{- range $key, $value := .observed.composite.resource.metadata.annotations }}
+              {{ $key }}: {{ $value | quote }}
+              {{- end }}
             finalizers:
             - resources-finalizer.argocd.argoproj.io
           spec:
