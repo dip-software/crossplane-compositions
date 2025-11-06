@@ -62,7 +62,7 @@ spec:
               path: {{ .observed.composite.resource.spec.path }}
               {{- end }}
               helm:
-                releaseName: {{ .observed.composite.resource.metadata.name }}
+                releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.helm.releaseName }}
                 valuesObject:
                   {{- if .observed.composite.resource.spec.helm.valuesObject }}
                   {{- range $key, $value := .observed.composite.resource.spec.helm.valuesObject }}
