@@ -1,0 +1,39 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: otlp-gateway
+  namespace: default  # Add namespace for testing
+spec:
+  project: "starlift-observability"
+  source:
+    repoURL: "ghcr.io/philips-internal"
+    chartName: helm-charts/otlp-gateway
+    targetRevision: "0.25.0"
+    withConfigKeys:
+      - clusterFqdn
+      - region
+      - partition
+      - resourcePrefix
+    helm:
+      valuesObject:
+        caddy:
+          container:
+            image: ghcr.io/philips-internal/caddy-payloadsize:sha-1d0ff56
+        authn:
+          oidc:
+            enabled: false
+            issuer: https://issuer.obs-us-east-ct.hsp.philips.com
+          static_tokens:
+            enabled: false
+            secret: otlp-gateway-static-tokens
+          signed_tokens:
+            enabled: true
+            secret: otlp-gateway-signing-key
+          client_ca:
+            enabled: false
+        ingress:
+          enabled: false
+        loadbalancer:
+          enabled: true
+        pyroscope:
+          enabled: false

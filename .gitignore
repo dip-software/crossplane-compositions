@@ -1,0 +1,5 @@
+# Crossplane render temporary files
+.crossplane-render-*
+
+# Crossplane cache
+.crossplane/

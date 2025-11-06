@@ -69,6 +69,48 @@ The composition references an `EnvironmentConfig` (e.g., `hsp-addons`) to inject
 
 ## Usage
 
+### Testing
+
+Run tests to validate the composition and render examples:
+
+```bash
+# Run all tests from root directory
+make test
+
+# Run helmapp-specific tests
+cd kustomize/base/helmapp
+make test
+
+# Run only validation
+make validate
+
+# Run only rendering
+make render
+
+# Show all available targets
+make help
+```
+
+**Prerequisites for testing:**
+
+- Install [Crossplane CLI](https://docs.crossplane.io/latest/cli/): `curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh" | sh`
+
+### Project Structure
+
+```
+crossplane-compositions/
+├── Makefile                          # Root Makefile (runs all tests)
+└── kustomize/base/helmapp/
+    ├── Makefile                      # HelmApp-specific tests
+    ├── examples/                     # Example HelmApplication resources
+    │   ├── go-hello-world.yaml
+    │   └── otlp-gateway.yaml
+    ├── helmapp-xrd.yaml
+    ├── helmapp-composition.yaml
+    ├── functions.yaml
+    └── test-environment-config.yaml
+```
+
 ### Deploy the Composition
 
 ```bash
@@ -76,6 +118,7 @@ kubectl apply -k kustomize/base/helmapp
 ```
 
 This deploys:
+
 - The XRD for `HelmApplication`
 - The composition
 - Argo CD RBAC permissions

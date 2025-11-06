@@ -1,0 +1,28 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: go-hello-world
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
+    path: .
+    targetRevision: "0.14.0"
+    helm:
+      valuesObject:
+        replicaCount: 2
+        serviceType: "LoadBalancer"
+        httpRoute:
+          enabled: true
+          gatewayName: "shared-gateway"
+          gatewayNamespace: "gateway"
+          hostnames:
+            - "{{ include \"go-hello-world.fullname\" . }}.{{ .Values.environmentConfig.clusterFqdn }}"
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /

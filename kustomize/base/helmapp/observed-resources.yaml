@@ -1,0 +1,5 @@
+apiVersion: internal.crossplane.io/v1alpha1
+kind: ObservedResources
+resources: []
+# This file represents the observed state of resources during rendering.
+# It can be populated with existing resources if needed for testing.
