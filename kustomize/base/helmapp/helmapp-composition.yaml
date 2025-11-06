@@ -56,25 +56,25 @@ spec:
           spec:
             project: {{ default "default" .observed.composite.resource.spec.project }}
             source:
-              repoURL: {{ .observed.composite.resource.spec.repoURL }}
-              targetRevision: {{ .observed.composite.resource.spec.targetRevision }}
-              {{- if and .observed.composite.resource.spec.chartName (not (hasPrefix "oci://" .observed.composite.resource.spec.repoURL)) }}
-              chart: {{ .observed.composite.resource.spec.chartName }}
+              repoURL: {{ .observed.composite.resource.spec.source.repoURL }}
+              targetRevision: {{ .observed.composite.resource.spec.source.targetRevision }}
+              {{- if and .observed.composite.resource.spec.source.chartName (not (hasPrefix "oci://" .observed.composite.resource.spec.source.repoURL)) }}
+              chart: {{ .observed.composite.resource.spec.source.chartName }}
               {{- end }}
-              {{- if .observed.composite.resource.spec.path }}
-              path: {{ .observed.composite.resource.spec.path }}
+              {{- if .observed.composite.resource.spec.source.path }}
+              path: {{ .observed.composite.resource.spec.source.path }}
               {{- end }}
               helm:
-                releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.helm.releaseName }}
+                releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName }}
                 valuesObject:
-                  {{- if .observed.composite.resource.spec.helm.valuesObject }}
-                  {{- range $key, $value := .observed.composite.resource.spec.helm.valuesObject }}
+                  {{- if .observed.composite.resource.spec.source.helm.valuesObject }}
+                  {{- range $key, $value := .observed.composite.resource.spec.source.helm.valuesObject }}
                   {{ $key }}: {{ toJson $value }}
                   {{- end }}
                   {{- end }}
                   {{- if (index .context "apiextensions.crossplane.io/environment") }}
                   {{- $env := index .context "apiextensions.crossplane.io/environment" }}
-                  {{- $filterKeys := .observed.composite.resource.spec.withConfigKeys }}
+                  {{- $filterKeys := .observed.composite.resource.spec.source.withConfigKeys }}
                   environmentConfig:
                     {{- if $filterKeys }}
                     {{- /* Build filtered config based on exact and nested key matches */ -}}
