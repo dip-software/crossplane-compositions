@@ -7,7 +7,7 @@ spec:
   project: "starlift-observability"
   source:
     repoURL: "ghcr.io/philips-internal"
-    chartName: helm-charts/otlp-gateway
+    chart: helm-charts/otlp-gateway
     targetRevision: "0.25.0"
     withConfigKeys:
       - clusterFqdn

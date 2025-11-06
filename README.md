@@ -22,7 +22,7 @@ Defines the `HelmApplication` resource with the following inputs:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `chartName` | string | No | Name of the Helm chart (not needed for OCI registries) |
+| `chart` | string | No | Name of the Helm chart (not needed for OCI registries) |
 | `repoURL` | string | Yes | URL of the Helm chart repository (supports `https://` and `oci://`) |
 | `targetRevision` | string | Yes | Chart version/revision to deploy |
 | `path` | string | No | Optional path to the chart within the repository |
@@ -136,19 +136,19 @@ metadata:
   name: my-app
   namespace: default
 spec:
-  chartName: "myapp"
-  repoURL: "https://charts.example.com"
-  targetRevision: "1.0.0"
   project: "default"
-  
-  helm:
-    valuesObject:
-      replicas: 3
-      image:
-        tag: "latest"
+  source:
+    chart: "myapp"
+    repoURL: "https://charts.example.com"
+    targetRevision: "1.0.0"
+    helm:
+      valuesObject:
+        replicas: 3
+        image:
+          tag: "latest"
 ```
 
-**Example 2: OCI Registry (no chartName needed)**
+**Example 2: OCI Registry (no chart needed)**
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -157,14 +157,14 @@ metadata:
   name: go-hello-world
   namespace: starlift-observability
 spec:
-  repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
-  targetRevision: "0.12.0"
   project: "starlift-observability"
-  
-  helm:
-    valuesObject:
-      replicaCount: 2
-      serviceType: "LoadBalancer"
+  source:
+    repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
+    targetRevision: "0.12.0"
+    helm:
+      valuesObject:
+        replicaCount: 2
+        serviceType: "LoadBalancer"
 ```
 
 ### Verify the Argo CD Application
@@ -221,29 +221,33 @@ image: myimage:1.0.0
 
 ### Traditional Helm Repositories
 
-For standard Helm repositories (HTTP/HTTPS), specify both `repoURL` and `chartName`:
+For standard Helm repositories (HTTP/HTTPS), specify both `repoURL` and `chart`:
 
 ```yaml
 spec:
-  repoURL: "https://charts.example.com"
-  chartName: "my-chart"
-  targetRevision: "1.0.0"
-  helm:
-    valuesObject:
-      key: value
+  project: "default"
+  source:
+    repoURL: "https://charts.example.com"
+    chart: "my-chart"
+    targetRevision: "1.0.0"
+    helm:
+      valuesObject:
+        key: value
 ```
 
 ### OCI Registries
 
-For OCI registries, the chart reference is included in the `repoURL`. Do not specify `chartName`:
+For OCI registries, the chart reference is included in the `repoURL`. Do not specify `chart`:
 
 ```yaml
 spec:
-  repoURL: "oci://ghcr.io/owner/charts/chart-name"
-  targetRevision: "1.0.0"
-  helm:
-    valuesObject:
-      key: value
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/owner/charts/chart-name"
+    targetRevision: "1.0.0"
+    helm:
+      valuesObject:
+        key: value
 ```
 
 ## Group Reference
@@ -270,4 +274,4 @@ When a `HelmApplication` resource is created, the composition automatically crea
 - Argo CD Applications are created in the same namespace as the `HelmApplication` resource
 - EnvironmentConfig references are resolved by Crossplane at composition time
 - The composition uses Crossplane Pipeline mode with function-go-templating
-- For OCI registries, omit the `chartName` field as the chart is specified in the `repoURL`
+- For OCI registries, omit the `chart` field as the chart is specified in the `repoURL`

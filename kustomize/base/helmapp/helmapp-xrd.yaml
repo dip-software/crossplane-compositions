@@ -27,7 +27,7 @@ spec:
                 description: "Source specification for the Helm chart"
                 properties:
                   # Chart name (e.g., "my-chart")
-                  chartName:
+                  chart:
                     type: string
                     description: "Name of the Helm chart to deploy"
                   

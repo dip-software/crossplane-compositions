@@ -58,8 +58,8 @@ spec:
             source:
               repoURL: {{ .observed.composite.resource.spec.source.repoURL }}
               targetRevision: {{ .observed.composite.resource.spec.source.targetRevision }}
-              {{- if and .observed.composite.resource.spec.source.chartName (not (hasPrefix "oci://" .observed.composite.resource.spec.source.repoURL)) }}
-              chart: {{ .observed.composite.resource.spec.source.chartName }}
+              {{- if and .observed.composite.resource.spec.source.chart (not (hasPrefix "oci://" .observed.composite.resource.spec.source.repoURL)) }}
+              chart: {{ .observed.composite.resource.spec.source.chart }}
               {{- end }}
               {{- if .observed.composite.resource.spec.source.path }}
               path: {{ .observed.composite.resource.spec.source.path }}
