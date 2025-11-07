@@ -11,7 +11,7 @@ The `HelmApplication` is a namespace-scoped Crossplane resource that creates an 
 - **Namespace Scoped**: The composition operates within specific namespaces, not cluster-wide
 - **Helm Chart Deployment**: Deploys any Helm chart from a specified repository
 - **Environment Configuration**: Integrates with Crossplane `EnvironmentConfig` to inject environment-specific values
-- **Dynamic Values**: Supports flexible value injection through `helm.valuesObject` and `environmentConfig`
+- **Dynamic Values**: Supports flexible value injection through `source.helm.valuesObject` and `environmentConfig`
 - **Crossplane v2**: Uses modern Crossplane v2 APIs without claim/composite separation
 
 ## Components
@@ -43,29 +43,7 @@ Implements the XRD by creating an Argo CD `Application` resource. The compositio
 - Supports both traditional Helm repositories and OCI registries
 - Conditionally sets `spec.chart` only for non-OCI repositories
 
-### 3. Argo CD RBAC - `argocd-rbac.yaml`
-
-Provides necessary RBAC permissions for Crossplane to manage Argo CD resources:
-
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: argocd:aggregate-to-crossplane
-  labels:
-    rbac.crossplane.io/aggregate-to-crossplane: "true"
-rules:
-- apiGroups:
-  - argoproj.io
-  resources:
-  - applications
-  - applicationsets
-  - appprojects
-  verbs:
-  - "*"
-```
-
-### 4. EnvironmentConfig
+### 3. EnvironmentConfig
 
 The composition references an `EnvironmentConfig` (e.g., `hsp-addons`) to inject environment-specific values. All fields from the EnvironmentConfig are automatically included in the `environmentConfig` section of the Helm values. You can optionally filter which keys are included by specifying `source.withConfigKeys` with an array of key name prefixes.
 
@@ -97,33 +75,11 @@ make help
 
 - Install [Crossplane CLI](https://docs.crossplane.io/latest/cli/): `curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh" | sh`
 
-### Project Structure
-
-```
-crossplane-compositions/
-├── Makefile                          # Root Makefile (runs all tests)
-└── kustomize/base/helmapp/
-    ├── Makefile                      # HelmApp-specific tests
-    ├── examples/                     # Example HelmApplication resources
-    │   ├── go-hello-world.yaml
-    │   └── otlp-gateway.yaml
-    ├── helmapp-xrd.yaml
-    ├── helmapp-composition.yaml
-    ├── functions.yaml
-    └── test-environment-config.yaml
-```
-
 ### Deploy the Composition
 
 ```bash
 kubectl apply -k kustomize/base/helmapp
 ```
-
-This deploys:
-
-- The XRD for `HelmApplication`
-- The composition
-- Argo CD RBAC permissions
 
 ### Create a HelmApplication Resource
 
