@@ -157,6 +157,17 @@ spec:
                     {{- end }}
                     {{- end }}
                     {{- end }}
+                    # Duplicate tags.Environment at the root as resourcePrefix for easier access (only if not already set)
+                    {{- if not (index $env "resourcePrefix") }}
+                    {{- if (index $env "tags") }}
+                    {{- $tags := index $env "tags" }}
+                    {{- if (typeOf $tags | contains "map") }}
+                    {{- if (index $tags "Environment") }}
+                    resourcePrefix: {{ toJson (index $tags "Environment") }}
+                    {{- end }}
+                    {{- end }}
+                    {{- end }}
+                    {{- end }}
                   {{- end }}
             destination:
               server: https://kubernetes.default.svc
