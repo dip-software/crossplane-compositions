@@ -22,13 +22,14 @@ Defines the `HelmApplication` resource with the following inputs:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `chart` | string | No | Name of the Helm chart (not needed for OCI registries) |
-| `repoURL` | string | Yes | URL of the Helm chart repository (supports `https://` and `oci://`) |
-| `targetRevision` | string | Yes | Chart version/revision to deploy |
-| `path` | string | No | Optional path to the chart within the repository |
-| `helm.valuesObject` | object | No | Helm chart values as key-value pairs |
-| `withConfigKeys` | array | No | Optional array of string prefixes to filter which environmentConfigs to include |
 | `project` | string | No | Argo CD project name (defaults to "default") |
+| `source.chart` | string | No | Name of the Helm chart (not needed for OCI registries) |
+| `source.repoURL` | string | Yes | URL of the Helm chart repository (supports `https://` and `oci://`) |
+| `source.targetRevision` | string | Yes | Chart version/revision to deploy |
+| `source.path` | string | No | Optional path to the chart within the repository |
+| `source.helm.releaseName` | string | No | Helm release name (defaults to the HelmApplication resource name) |
+| `source.helm.valuesObject` | object | No | Helm chart values as key-value pairs |
+| `source.withConfigKeys` | array | No | Optional array of string prefixes to filter which environmentConfigs to include |
 
 ### 2. Composition - `helmapp-composition.yaml`
 
@@ -36,7 +37,8 @@ Implements the XRD by creating an Argo CD `Application` resource. The compositio
 
 - Maps all XRD inputs to the Argo CD Application spec
 - References an `EnvironmentConfig` to inject environment-specific values
-- Merges `helm.valuesObject` with `environmentConfig` in the Helm values
+- Merges `source.helm.valuesObject` with `environmentConfig` in the Helm values
+- Filters environmentConfig keys based on `source.withConfigKeys` if specified
 - Sets up automated sync policies for Argo CD
 - Supports both traditional Helm repositories and OCI registries
 - Conditionally sets `spec.chart` only for non-OCI repositories
@@ -65,7 +67,7 @@ rules:
 
 ### 4. EnvironmentConfig
 
-The composition references an `EnvironmentConfig` (e.g., `hsp-addons`) to inject environment-specific values. All fields from the EnvironmentConfig are automatically included in the `environmentConfig` section of the Helm values.
+The composition references an `EnvironmentConfig` (e.g., `hsp-addons`) to inject environment-specific values. All fields from the EnvironmentConfig are automatically included in the `environmentConfig` section of the Helm values. You can optionally filter which keys are included by specifying `source.withConfigKeys` with an array of key name prefixes.
 
 ## Usage
 
@@ -201,18 +203,26 @@ Helm Chart Deployment
 The composition automatically merges environment-specific values:
 
 ```yaml
-# Input helm.valuesObject
-helm:
-  valuesObject:
-    replicas: 3
-    image: myimage:1.0.0
+# Input source.helm.valuesObject
+source:
+  helm:
+    valuesObject:
+      replicas: 3
+      image: myimage:1.0.0
+  withConfigKeys:
+    - resourcePrefix
+    - clusterFqdn
 
 # EnvironmentConfig data
 resourcePrefix: "dip"
+clusterFqdn: "example.com"
+region: "us-east-1"
 
 # Resulting Helm values (merged in Argo CD Application)
+# Only keys matching withConfigKeys prefixes are included
 environmentConfig:
   resourcePrefix: "dip"
+  clusterFqdn: "example.com"
 replicas: 3
 image: myimage:1.0.0
 ```
