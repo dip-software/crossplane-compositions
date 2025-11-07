@@ -14,6 +14,24 @@ The `HelmApplication` is a namespace-scoped Crossplane resource that creates an 
 - **Dynamic Values**: Supports flexible value injection through `source.helm.valuesObject` and `environmentConfig`
 - **Crossplane v2**: Uses modern Crossplane v2 APIs without claim/composite separation
 
+### Contract
+
+The composition expects a minimum set of `environmentConfig` values to be available on every cluster. Cluster operators must ensure this contract is satisfied by validating the Crossplane `EnvironmentConfig` resources.
+
+#### Required environmentConfig Variables
+
+| Variable           | Description                                                   |
+|--------------------|---------------------------------------------------------------|
+| `accountId`        | The AWS Account ID where the Kubernetes cluster is running in             |
+| `clusterId`        | The Kubernete cluster ID | 
+| `clusterFqdn`      | The Kubernetes cluster FQDN (Fully Qualified Domain Name)               |
+| `clusterEndpoint`  | The Kubernetes API server endpoint                           |
+| `oidcProvider`     | The OIDC provider URL for the Kubernetes cluster             |
+| `oidcProviderArn`  | The OIDC provider ARN for the Kubernetes cluster              |
+| `partition`        | The AWS Partition to use for ARNs (e.g., `aws`, `aws-cn`, `aws-us-gov`) |
+| `region`           | The AWS Region where the Kubernetes cluster is running                  |
+| `resourcePrefix`   | An account wide unique prefix associated with the Kubernetes cluster |
+
 ## Components
 
 ### 1. CompositeResourceDefinition (XRD) - `helmapp-xrd.yaml`
