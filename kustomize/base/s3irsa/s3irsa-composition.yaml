@@ -42,7 +42,7 @@ spec:
           {{- $xr := .observed.composite.resource }}
           {{- $namespace := $xr.metadata.namespace }}
           {{- $name := $xr.metadata.name }}
-          {{- $serviceAccountName := $xr.spec.serviceAccountName }}
+          {{- $serviceAccountName := $xr.spec.serviceAccount.name }}
           {{- $existingBucket := $xr.spec.existingBucketName }}
           
           {{- if and $existingBucket $xr.spec.bucketConfig $xr.spec.bucketConfig.name }}

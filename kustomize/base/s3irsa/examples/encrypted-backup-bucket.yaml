@@ -4,8 +4,9 @@ metadata:
   name: backup-storage
   namespace: backup-system
 spec:
-  # Name of the ServiceAccount to bind with IAM role
-  serviceAccountName: backup-writer-sa
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: backup-writer-sa
   
   # Create a new S3 bucket with KMS encryption
   bucketConfig:

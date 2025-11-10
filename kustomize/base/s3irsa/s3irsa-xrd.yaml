@@ -21,10 +21,16 @@ spec:
           spec:
             type: object
             properties:
-              # Service Account name for IRSA binding
-              serviceAccountName:
-                type: string
-                description: "Name of the Kubernetes ServiceAccount to bind with IAM role for S3 access"
+              # Service Account configuration for IRSA binding
+              serviceAccount:
+                type: object
+                description: "Kubernetes ServiceAccount configuration for IRSA binding"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the Kubernetes ServiceAccount to bind with IAM role for S3 access"
+                required:
+                - name
               
               # Optional: Use existing bucket instead of creating new one
               existingBucketName:
@@ -119,7 +125,7 @@ spec:
                 - name
             
             required:
-            - serviceAccountName
+            - serviceAccount
           
           status:
             type: object

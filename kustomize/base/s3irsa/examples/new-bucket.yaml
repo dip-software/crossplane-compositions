@@ -4,8 +4,9 @@ metadata:
   name: my-app-storage
   namespace: my-app
 spec:
-  # Name of the ServiceAccount to bind with IAM role
-  serviceAccountName: my-app-sa
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: my-app-sa
   
   # Create a new S3 bucket with custom configuration
   bucketConfig:
