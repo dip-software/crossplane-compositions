@@ -27,7 +27,7 @@ spec:
             matchLabels:
               - key: config
                 type: Value
-                value: aws-config
+                value: hsp-addons
   
   # Render all AWS and Kubernetes resources using Go templating
   - step: render-resources
@@ -50,11 +50,12 @@ spec:
           {{- end }}
           
           {{- $env := index .context "apiextensions.crossplane.io/environment" }}
-          {{- $awsAccountId := index $env "awsAccountId" }}
-          {{- $awsRegion := index $env "awsRegion" }}
-          {{- $eksClusterName := index $env "eksClusterName" }}
-          {{- $eksOidcProvider := index $env "eksOidcProvider" }}
-          {{- $eksOidcProviderArn := index $env "eksOidcProviderArn" }}
+          {{- $awsAccountId := index $env "accountId" }}
+          {{- $awsRegion := index $env "region" }}
+          {{- $eksClusterName := index $env "clusterName" }}
+          {{- $eks := index $env "eks" }}
+          {{- $eksOidcProvider := index $eks "oidcProvider" }}
+          {{- $eksOidcProviderArn := index $eks "oidcProviderArn" }}
           
           {{- $bucketName := "" }}
           {{- if $existingBucket }}
@@ -156,6 +157,7 @@ spec:
               {{- end }}
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
           
           {{- if $versioningEnabled }}
           ---
@@ -174,6 +176,7 @@ spec:
                 - status: Enabled
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
           {{- end }}
           
           {{- if $encryptionEnabled }}
@@ -200,6 +203,7 @@ spec:
                   bucketKeyEnabled: true
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
           {{- end }}
           
           ---
@@ -220,6 +224,7 @@ spec:
               restrictPublicBuckets: true
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
           {{- end }}
           
           ---
@@ -240,6 +245,7 @@ spec:
               {{- end }}
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
           
           ---
           apiVersion: iam.aws.m.upbound.io/v1beta1
@@ -289,6 +295,7 @@ spec:
                 }
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
           
           ---
           apiVersion: iam.aws.m.upbound.io/v1beta1
@@ -305,6 +312,7 @@ spec:
                 name: {{ $name }}-irsa-role
             providerConfigRef:
               name: default
+              kind: ClusterProviderConfig
   
   # Auto-ready function to mark composition as ready when all resources are ready
   - step: auto-ready

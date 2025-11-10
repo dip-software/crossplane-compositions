@@ -3,13 +3,14 @@ kind: EnvironmentConfig
 metadata:
   name: aws-test-config
   labels:
-    config: aws-config
+    config: hsp-addons
 data:
-  awsAccountId: "123456789012"
-  awsRegion: "us-east-1"
-  eksClusterName: "test-cluster"
-  eksOidcProvider: "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
-  eksOidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
+  accountId: "123456789012"
+  region: "us-east-1"
+  clusterName: "test-cluster"
+  eks:
+    oidcProvider: "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
+    oidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
   tags:
     Environment: "test"
     ManagedBy: "Crossplane"
