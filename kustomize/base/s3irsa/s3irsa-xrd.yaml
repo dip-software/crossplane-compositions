@@ -29,6 +29,8 @@ spec:
                   name:
                     type: string
                     description: "Name of the Kubernetes ServiceAccount to bind with IAM role for S3 access"
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                    maxLength: 253
                 required:
                 - name
               
