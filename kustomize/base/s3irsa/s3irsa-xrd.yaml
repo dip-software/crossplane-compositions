@@ -1,0 +1,125 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: s3irsas.dip.io
+spec:
+  group: dip.io
+  names:
+    kind: S3IRSA
+    plural: s3irsas
+  # Namespace scope - compositions will be namespace-scoped
+  scope: Namespaced
+  
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              # Service Account name for IRSA binding
+              serviceAccountName:
+                type: string
+                description: "Name of the Kubernetes ServiceAccount to bind with IAM role for S3 access"
+              
+              # Optional: Use existing bucket instead of creating new one
+              existingBucketName:
+                type: string
+                description: "Optional: Name of an existing S3 bucket to use. If not provided, a new bucket will be created."
+              
+              # Optional: Bucket configuration (only used when creating new bucket)
+              bucketConfig:
+                type: object
+                description: "Configuration for new S3 bucket (ignored if existingBucketName is provided)"
+                properties:
+                  # Bucket name prefix or full name
+                  name:
+                    type: string
+                    description: "S3 bucket name. If not provided, auto-generated based on namespace and resource name."
+                  
+                  # Enable versioning
+                  versioning:
+                    type: boolean
+                    description: "Enable S3 bucket versioning"
+                    default: false
+                  
+                  # Encryption configuration
+                  encryption:
+                    type: object
+                    description: "Bucket encryption settings"
+                    properties:
+                      # Use KMS encryption
+                      enabled:
+                        type: boolean
+                        description: "Enable KMS encryption for the bucket"
+                        default: true
+                      
+                      # Optional: Use existing KMS key
+                      existingKmsKeyId:
+                        type: string
+                        description: "Optional: ARN or ID of existing KMS key. If not provided, AWS managed key (aws/s3) will be used for efficiency."
+              
+              # IAM permissions configuration
+              permissions:
+                type: object
+                description: "IAM permissions configuration"
+                properties:
+                  # Allow read operations
+                  allowRead:
+                    type: boolean
+                    description: "Allow read operations (GetObject, ListBucket)"
+                    default: true
+                  
+                  # Allow write operations
+                  allowWrite:
+                    type: boolean
+                    description: "Allow write operations (PutObject, DeleteObject)"
+                    default: true
+                  
+                  # Additional S3 actions to allow
+                  additionalActions:
+                    type: array
+                    description: "Additional S3 actions to allow beyond standard read/write"
+                    items:
+                      type: string
+              
+              # Optional: Tags for created resources
+              tags:
+                type: object
+                description: "Tags to apply to created AWS resources"
+                x-kubernetes-preserve-unknown-fields: true
+            
+            required:
+            - serviceAccountName
+          
+          status:
+            type: object
+            properties:
+              bucketName:
+                type: string
+                description: "Name of the S3 bucket (created or existing)"
+              bucketArn:
+                type: string
+                description: "ARN of the S3 bucket"
+              roleArn:
+                type: string
+                description: "ARN of the IAM role created for IRSA"
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string

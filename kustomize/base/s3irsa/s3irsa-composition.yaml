@@ -1,0 +1,276 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: s3irsa-aws
+  namespace: crossplane-system
+spec:
+  # Reference to the XRD
+  compositeTypeRef:
+    apiVersion: dip.io/v1alpha1
+    kind: S3IRSA
+  
+  mode: Pipeline
+  
+  pipeline:
+  # Load environment configurations for AWS account, region, and EKS cluster info
+  - step: load-environment-configs
+    functionRef:
+      name: function-environment-configs
+    input:
+      apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+      kind: Input
+      spec:
+        environmentConfigs:
+        - type: Selector
+          selector:
+            mode: Multiple
+            matchLabels:
+              - key: config
+                type: Value
+                value: aws-config
+  
+  # Render all AWS and Kubernetes resources using Go templating
+  - step: render-resources
+    functionRef:
+      name: function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          {{- $xr := .observed.composite.resource }}
+          {{- $namespace := $xr.metadata.namespace }}
+          {{- $name := $xr.metadata.name }}
+          {{- $serviceAccountName := $xr.spec.serviceAccountName }}
+          {{- $existingBucket := $xr.spec.existingBucketName }}
+          
+          {{- if and $existingBucket $xr.spec.bucketConfig $xr.spec.bucketConfig.name }}
+          {{- fail "Error: existingBucketName and bucketConfig.name are mutually exclusive. Please specify only one." }}
+          {{- end }}
+          
+          {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+          {{- $awsAccountId := index $env "awsAccountId" }}
+          {{- $awsRegion := index $env "awsRegion" }}
+          {{- $eksClusterName := index $env "eksClusterName" }}
+          {{- $eksOidcProvider := index $env "eksOidcProvider" }}
+          {{- $eksOidcProviderArn := index $env "eksOidcProviderArn" }}
+          
+          {{- $bucketName := "" }}
+          {{- if $existingBucket }}
+          {{- $bucketName = $existingBucket }}
+          {{- else if and $xr.spec.bucketConfig $xr.spec.bucketConfig.name }}
+          {{- $bucketName = $xr.spec.bucketConfig.name }}
+          {{- else }}
+          {{- $bucketName = printf "%s-%s-%s" $namespace $name $awsAccountId }}
+          {{- end }}
+          
+          {{- $createBucket := not $existingBucket }}
+          
+          {{- $encryptionEnabled := true }}
+          {{- if and $xr.spec.bucketConfig $xr.spec.bucketConfig.encryption }}
+          {{- if hasKey $xr.spec.bucketConfig.encryption "enabled" }}
+          {{- $encryptionEnabled = $xr.spec.bucketConfig.encryption.enabled }}
+          {{- end }}
+          {{- end }}
+          
+          {{- $useCustomKms := false }}
+          {{- $kmsKeyId := "" }}
+          {{- if and $xr.spec.bucketConfig $xr.spec.bucketConfig.encryption $xr.spec.bucketConfig.encryption.existingKmsKeyId }}
+          {{- $useCustomKms = true }}
+          {{- $kmsKeyId = $xr.spec.bucketConfig.encryption.existingKmsKeyId }}
+          {{- end }}
+          
+          {{- $versioningEnabled := false }}
+          {{- if and $xr.spec.bucketConfig }}
+          {{- if hasKey $xr.spec.bucketConfig "versioning" }}
+          {{- $versioningEnabled = $xr.spec.bucketConfig.versioning }}
+          {{- end }}
+          {{- end }}
+          
+          {{- $allowRead := true }}
+          {{- $allowWrite := true }}
+          {{- if $xr.spec.permissions }}
+          {{- if hasKey $xr.spec.permissions "allowRead" }}
+          {{- $allowRead = $xr.spec.permissions.allowRead }}
+          {{- end }}
+          {{- if hasKey $xr.spec.permissions "allowWrite" }}
+          {{- $allowWrite = $xr.spec.permissions.allowWrite }}
+          {{- end }}
+          {{- end }}
+          
+          {{- $s3Actions := list }}
+          {{- if $allowRead }}
+          {{- $s3Actions = append $s3Actions "s3:GetObject" }}
+          {{- $s3Actions = append $s3Actions "s3:GetObjectVersion" }}
+          {{- $s3Actions = append $s3Actions "s3:ListBucket" }}
+          {{- $s3Actions = append $s3Actions "s3:GetBucketLocation" }}
+          {{- end }}
+          {{- if $allowWrite }}
+          {{- $s3Actions = append $s3Actions "s3:PutObject" }}
+          {{- $s3Actions = append $s3Actions "s3:DeleteObject" }}
+          {{- end }}
+          {{- if and $xr.spec.permissions $xr.spec.permissions.additionalActions }}
+          {{- range $action := $xr.spec.permissions.additionalActions }}
+          {{- $s3Actions = append $s3Actions $action }}
+          {{- end }}
+          {{- end }}
+          
+          {{- $kmsActions := list }}
+          {{- if and $encryptionEnabled $allowRead }}
+          {{- $kmsActions = append $kmsActions "kms:Decrypt" }}
+          {{- $kmsActions = append $kmsActions "kms:DescribeKey" }}
+          {{- end }}
+          {{- if and $encryptionEnabled $allowWrite }}
+          {{- $kmsActions = append $kmsActions "kms:Encrypt" }}
+          {{- $kmsActions = append $kmsActions "kms:GenerateDataKey" }}
+          {{- end }}
+          
+          {{- $tags := dict }}
+          {{- if $xr.spec.tags }}
+          {{- range $key, $value := $xr.spec.tags }}
+          {{- $_ := set $tags $key $value }}
+          {{- end }}
+          {{- end }}
+          {{- $_ := set $tags "ManagedBy" "Crossplane" }}
+          {{- $_ := set $tags "Namespace" $namespace }}
+          {{- $_ := set $tags "CompositeResource" $name }}
+          
+          {{- if $createBucket }}
+          ---
+          apiVersion: s3.aws.m.upbound.io/v1beta1
+          kind: Bucket
+          metadata:
+            name: {{ $name }}-bucket
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: s3-bucket
+              crossplane.io/external-name: {{ $bucketName }}
+          spec:
+            forProvider:
+              region: {{ $awsRegion }}
+              {{- if $tags }}
+              tags:
+                {{- range $key, $value := $tags }}
+                {{ $key }}: {{ $value | quote }}
+                {{- end }}
+              {{- end }}
+            providerConfigRef:
+              name: default
+          
+          {{- if $versioningEnabled }}
+          ---
+          apiVersion: s3.aws.m.upbound.io/v1beta1
+          kind: BucketVersioningV2
+          metadata:
+            name: {{ $name }}-versioning
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: s3-bucket-versioning
+          spec:
+            forProvider:
+              region: {{ $awsRegion }}
+              bucketRef:
+                name: {{ $name }}-bucket
+              versioningConfiguration:
+                - status: Enabled
+            providerConfigRef:
+              name: default
+          {{- end }}
+          
+          {{- if $encryptionEnabled }}
+          ---
+          apiVersion: s3.aws.m.upbound.io/v1beta1
+          kind: BucketServerSideEncryptionConfigurationV2
+          metadata:
+            name: {{ $name }}-encryption
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: s3-bucket-encryption
+          spec:
+            forProvider:
+              region: {{ $awsRegion }}
+              bucketRef:
+                name: {{ $name }}-bucket
+              rule:
+                - applyServerSideEncryptionByDefault:
+                    {{- if $useCustomKms }}
+                    - sseAlgorithm: aws:kms
+                      kmsMasterKeyId: {{ $kmsKeyId }}
+                    {{- else }}
+                    - sseAlgorithm: AES256
+                    {{- end }}
+                  bucketKeyEnabled: true
+            providerConfigRef:
+              name: default
+          {{- end }}
+          
+          ---
+          apiVersion: s3.aws.m.upbound.io/v1beta1
+          kind: BucketPublicAccessBlock
+          metadata:
+            name: {{ $name }}-public-access-block
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: s3-bucket-public-access-block
+          spec:
+            forProvider:
+              region: {{ $awsRegion }}
+              bucketRef:
+                name: {{ $name }}-bucket
+              blockPublicAcls: true
+              blockPublicPolicy: true
+              ignorePublicAcls: true
+              restrictPublicBuckets: true
+            providerConfigRef:
+              name: default
+          {{- end }}
+          
+          ---
+          apiVersion: iam.aws.m.upbound.io/v1beta1
+          kind: Role
+          metadata:
+            name: {{ $name }}-irsa-role
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: iam-role
+          spec:
+            forProvider:
+              assumeRolePolicy: {{ printf "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Federated\": \"%s\"}, \"Action\": \"sts:AssumeRoleWithWebIdentity\", \"Condition\": {\"StringEquals\": {\"%s:sub\": \"system:serviceaccount:%s:%s\", \"%s:aud\": \"sts.amazonaws.com\"}}}]}" $eksOidcProviderArn $eksOidcProvider $namespace $serviceAccountName $eksOidcProvider | quote }}
+              {{- if $tags }}
+              tags:
+                {{- range $key, $value := $tags }}
+                {{ $key }}: {{ $value | quote }}
+                {{- end }}
+              {{- end }}
+            providerConfigRef:
+              name: default
+          
+          ---
+          apiVersion: iam.aws.m.upbound.io/v1beta1
+          kind: Policy
+          metadata:
+            name: {{ $name }}-s3-policy
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: iam-policy
+          spec:
+            forProvider:
+              policy: {{ printf "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[" }}{{- range $i, $action := $s3Actions }}{{- if $i }},{{- end }}\"{{ $action }}\"{{- end }}{{ printf "],\"Resource\":[\"arn:aws:s3:::%s\",\"arn:aws:s3:::%s/*\"]}" $bucketName $bucketName }}{{- if and $encryptionEnabled (gt (len $kmsActions) 0) }}{{ printf ",{\"Effect\":\"Allow\",\"Action\":[" }}{{- range $i, $action := $kmsActions }}{{- if $i }},{{- end }}\"{{ $action }}\"{{- end }}{{ printf "],\"Resource\":[" }}{{- if $useCustomKms }}{{ printf "\"arn:aws:kms:%s:%s:key/%s\"" $awsRegion $awsAccountId $kmsKeyId }}{{- else }}\"*\"{{- end }}{{ printf "]}" }}{{- end }}{{ printf "]}" }}
+            providerConfigRef:
+              name: default
+          
+          ---
+          apiVersion: iam.aws.m.upbound.io/v1beta1
+          kind: RolePolicyAttachment
+          metadata:
+            name: {{ $name }}-role-policy-attachment
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: iam-role-policy-attachment
+          spec:
+            forProvider:
+              policyArnRef:
+                name: {{ $name }}-s3-policy
+              roleRef:
+                name: {{ $name }}-irsa-role
+            providerConfigRef:
+              name: default
+  
+  # Auto-ready function to mark composition as ready when all resources are ready
+  - step: auto-ready
+    functionRef:
+      name: function-auto-ready

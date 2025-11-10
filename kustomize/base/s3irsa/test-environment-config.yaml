@@ -1,0 +1,15 @@
+apiVersion: apiextensions.crossplane.io/v1alpha1
+kind: EnvironmentConfig
+metadata:
+  name: aws-test-config
+  labels:
+    config: aws-config
+data:
+  awsAccountId: "123456789012"
+  awsRegion: "us-east-1"
+  eksClusterName: "test-cluster"
+  eksOidcProvider: "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
+  eksOidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
+  tags:
+    Environment: "test"
+    ManagedBy: "Crossplane"
