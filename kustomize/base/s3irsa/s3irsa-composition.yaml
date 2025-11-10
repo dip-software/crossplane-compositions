@@ -250,7 +250,43 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: iam-policy
           spec:
             forProvider:
-              policy: {{ printf "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[" }}{{- range $i, $action := $s3Actions }}{{- if $i }},{{- end }}\"{{ $action }}\"{{- end }}{{ printf "],\"Resource\":[\"arn:aws:s3:::%s\",\"arn:aws:s3:::%s/*\"]}" $bucketName $bucketName }}{{- if and $encryptionEnabled (gt (len $kmsActions) 0) }}{{ printf ",{\"Effect\":\"Allow\",\"Action\":[" }}{{- range $i, $action := $kmsActions }}{{- if $i }},{{- end }}\"{{ $action }}\"{{- end }}{{ printf "],\"Resource\":[" }}{{- if $useCustomKms }}{{ printf "\"arn:aws:kms:%s:%s:key/%s\"" $awsRegion $awsAccountId $kmsKeyId }}{{- else }}\"*\"{{- end }}{{ printf "]}" }}{{- end }}{{ printf "]}" }}
+              policy: |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        {{- range $i, $action := $s3Actions }}
+                        {{- if $i }},{{ end }}
+                        "{{ $action }}"
+                        {{- end }}
+                      ],
+                      "Resource": [
+                        "arn:aws:s3:::{{ $bucketName }}",
+                        "arn:aws:s3:::{{ $bucketName }}/*"
+                      ]
+                    }
+                    {{- if and $encryptionEnabled (gt (len $kmsActions) 0) }}
+                    ,{
+                      "Effect": "Allow",
+                      "Action": [
+                        {{- range $i, $action := $kmsActions }}
+                        {{- if $i }},{{ end }}
+                        "{{ $action }}"
+                        {{- end }}
+                      ],
+                      "Resource": [
+                        {{- if $useCustomKms }}
+                        "arn:aws:kms:{{ $awsRegion }}:{{ $awsAccountId }}:key/{{ $kmsKeyId }}"
+                        {{- else }}
+                        "*"
+                        {{- end }}
+                      ]
+                    }
+                    {{- end }}
+                  ]
+                }
             providerConfigRef:
               name: default
           
