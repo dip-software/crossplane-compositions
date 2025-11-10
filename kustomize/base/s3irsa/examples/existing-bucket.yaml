@@ -1,0 +1,22 @@
+apiVersion: dip.io/v1alpha1
+kind: S3IRSA
+metadata:
+  name: my-app-existing-storage
+  namespace: my-app
+spec:
+  # Name of the ServiceAccount to bind with IAM role
+  serviceAccountName: my-app-sa
+  
+  # Use an existing S3 bucket instead of creating a new one
+  existingBucketName: existing-company-bucket
+  
+  # IAM permissions for the existing bucket
+  permissions:
+    allowRead: true
+    allowWrite: true
+  
+  # Tags for IAM resources (bucket tags are not modified)
+  tags:
+    Application: my-app
+    Environment: production
+    Team: platform

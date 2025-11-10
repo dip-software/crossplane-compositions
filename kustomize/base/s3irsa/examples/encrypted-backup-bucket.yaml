@@ -1,0 +1,30 @@
+apiVersion: dip.io/v1alpha1
+kind: S3IRSA
+metadata:
+  name: backup-storage
+  namespace: backup-system
+spec:
+  # Name of the ServiceAccount to bind with IAM role
+  serviceAccountName: backup-writer-sa
+  
+  # Create a new S3 bucket with KMS encryption
+  bucketConfig:
+    name: backup-archives-encrypted
+    versioning: true
+    
+    # Use a custom KMS key for encryption
+    encryption:
+      enabled: true
+      existingKmsKeyId: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  
+  # Write-only permissions for backup operations
+  permissions:
+    allowRead: false
+    allowWrite: true
+    additionalActions:
+      - "s3:ListBucketVersions"
+  
+  tags:
+    Application: backup-system
+    Compliance: required
+    DataClassification: sensitive
