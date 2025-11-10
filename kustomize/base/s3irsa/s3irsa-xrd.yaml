@@ -92,6 +92,20 @@ spec:
                 type: object
                 description: "Tags to apply to created AWS resources"
                 x-kubernetes-preserve-unknown-fields: true
+              
+              # Optional: Provider configuration override
+              providerConfigRef:
+                type: object
+                description: "Optional: Override the default provider config reference"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the ProviderConfig"
+                    default: "default"
+                  kind:
+                    type: string
+                    description: "Kind of the ProviderConfig (e.g., ClusterProviderConfig, ProviderConfig)"
+                    default: "ClusterProviderConfig"
             
             required:
             - serviceAccountName

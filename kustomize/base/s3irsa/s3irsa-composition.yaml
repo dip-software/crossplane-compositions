@@ -137,6 +137,17 @@ spec:
           {{- $_ := set $tags "Namespace" $namespace }}
           {{- $_ := set $tags "CompositeResource" $name }}
           
+          {{- $providerConfigName := "default" }}
+          {{- $providerConfigKind := "ClusterProviderConfig" }}
+          {{- if $xr.spec.providerConfigRef }}
+          {{- if $xr.spec.providerConfigRef.name }}
+          {{- $providerConfigName = $xr.spec.providerConfigRef.name }}
+          {{- end }}
+          {{- if $xr.spec.providerConfigRef.kind }}
+          {{- $providerConfigKind = $xr.spec.providerConfigRef.kind }}
+          {{- end }}
+          {{- end }}
+          
           {{- if $createBucket }}
           ---
           apiVersion: s3.aws.m.upbound.io/v1beta1
@@ -156,8 +167,8 @@ spec:
                 {{- end }}
               {{- end }}
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           
           {{- if $versioningEnabled }}
           ---
@@ -175,8 +186,8 @@ spec:
               versioningConfiguration:
                 - status: Enabled
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           {{- end }}
           
           {{- if $encryptionEnabled }}
@@ -202,8 +213,8 @@ spec:
                     {{- end }}
                   bucketKeyEnabled: true
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           {{- end }}
           
           ---
@@ -223,8 +234,8 @@ spec:
               ignorePublicAcls: true
               restrictPublicBuckets: true
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           {{- end }}
           
           ---
@@ -244,8 +255,8 @@ spec:
                 {{- end }}
               {{- end }}
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           
           ---
           apiVersion: iam.aws.m.upbound.io/v1beta1
@@ -294,8 +305,8 @@ spec:
                   ]
                 }
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           
           ---
           apiVersion: iam.aws.m.upbound.io/v1beta1
@@ -311,8 +322,8 @@ spec:
               roleRef:
                 name: {{ $name }}-irsa-role
             providerConfigRef:
-              name: default
-              kind: ClusterProviderConfig
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
   
   # Auto-ready function to mark composition as ready when all resources are ready
   - step: auto-ready
