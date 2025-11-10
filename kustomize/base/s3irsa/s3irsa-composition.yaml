@@ -346,6 +346,9 @@ spec:
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.arn
           toFieldPath: status.bucketArn
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.writeConnectionSecretToRef
+          toFieldPath: spec.writeConnectionSecretToRef
       - name: iam-role
         patches:
         - type: ToCompositeFieldPath
