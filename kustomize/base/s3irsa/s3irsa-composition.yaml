@@ -206,10 +206,10 @@ spec:
               rule:
                 - applyServerSideEncryptionByDefault:
                     {{- if $useCustomKms }}
-                    - sseAlgorithm: aws:kms
-                      kmsMasterKeyId: {{ $kmsKeyId }}
+                    sseAlgorithm: aws:kms
+                    kmsMasterKeyId: {{ $kmsKeyId }}
                     {{- else }}
-                    - sseAlgorithm: AES256
+                    sseAlgorithm: AES256
                     {{- end }}
                   bucketKeyEnabled: true
             providerConfigRef:
