@@ -4,18 +4,25 @@ kind: Function
 metadata:
   name: function-environment-configs
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-environment-configs:v0.2.0
+  package: ghcr.io/crossplane-contrib/function-environment-configs:v0.4.0
 ---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
 metadata:
   name: function-go-templating
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-go-templating:v0.7.0
+  package: ghcr.io/crossplane-contrib/function-go-templating:v0.11.0
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-patch-and-transform
+spec:
+  package: ghcr.io/crossplane-contrib/function-patch-and-transform:v0.9.1
 ---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
 metadata:
   name: function-auto-ready
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-auto-ready:v0.3.0
+  package: ghcr.io/crossplane-contrib/function-auto-ready:v0.5.1
