@@ -173,7 +173,7 @@ spec:
           {{- if and $versioningEnabled (not $existingBucket) }}
           ---
           apiVersion: s3.aws.m.upbound.io/v1beta1
-          kind: BucketVersioningV2
+          kind: BucketVersioning
           metadata:
             name: {{ $name }}-versioning
             annotations:
@@ -193,7 +193,7 @@ spec:
           {{- if and $encryptionEnabled (not $existingBucket) }}
           ---
           apiVersion: s3.aws.m.upbound.io/v1beta1
-          kind: BucketServerSideEncryptionConfigurationV2
+          kind: BucketServerSideEncryptionConfiguration
           metadata:
             name: {{ $name }}-encryption
             annotations:
