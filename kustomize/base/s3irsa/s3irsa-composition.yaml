@@ -53,9 +53,9 @@ spec:
           {{- $awsAccountId := index $env "accountId" }}
           {{- $awsRegion := index $env "region" }}
           {{- $eksClusterName := index $env "clusterName" }}
-          {{- $eks := index $env "eks" }}
-          {{- $eksOidcProvider := index $eks "oidcProvider" }}
-          {{- $eksOidcProviderArn := index $eks "oidcProviderArn" }}
+          {{- $eks := index $env "eks" | default dict }}
+          {{- $eksOidcProvider := index $eks "oidcProvider" | default "" }}
+          {{- $eksOidcProviderArn := index $eks "oidcProviderArn" | default "" }}
           
           {{- $bucketName := "" }}
           {{- if $existingBucket }}
@@ -325,6 +325,32 @@ spec:
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
+  
+  # Patch status fields and publish connection details
+  - step: patch-and-transform
+    functionRef:
+      name: function-patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources:
+      - name: s3-bucket
+        connectionDetails:
+        - type: FromFieldPath
+          fromFieldPath: status.atProvider.id
+          name: bucketName
+        patches:
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.bucketName
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.arn
+          toFieldPath: status.bucketArn
+      - name: iam-role
+        patches:
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.arn
+          toFieldPath: status.roleArn
   
   # Auto-ready function to mark composition as ready when all resources are ready
   - step: auto-ready

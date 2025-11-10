@@ -106,6 +106,17 @@ spec:
                     type: string
                     description: "Kind of the ProviderConfig (e.g., ClusterProviderConfig, ProviderConfig)"
                     default: "ClusterProviderConfig"
+              
+              # Optional: Connection secret reference
+              writeConnectionSecretToRef:
+                type: object
+                description: "Optional: Write connection details (bucket name) to a Kubernetes secret in the same namespace"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the secret to write connection details to"
+                required:
+                - name
             
             required:
             - serviceAccountName
@@ -122,6 +133,9 @@ spec:
               roleArn:
                 type: string
                 description: "ARN of the IAM role created for IRSA"
+              accountId:
+                type: string
+                description: "AWS Account ID"
               conditions:
                 type: array
                 items:
