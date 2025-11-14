@@ -30,6 +30,13 @@ spec:
             matchLabels:
               - key: config
                 type: Value
+                value: dip-software    
+        - type: Selector
+          selector:
+            mode: Multiple
+            matchLabels:
+              - key: config
+                type: Value
                 value: hsp-addons
   
   - step: render-argocd-app

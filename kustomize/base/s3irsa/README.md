@@ -44,6 +44,7 @@ The composition requires the following Crossplane providers and functions:
 - `provider-aws-iam` v2.2.0
 
 Install these using:
+
 ```bash
 kubectl apply -f functions.yaml
 ```
@@ -56,9 +57,9 @@ The composition expects an `EnvironmentConfig` with the following fields:
 apiVersion: apiextensions.crossplane.io/v1alpha1
 kind: EnvironmentConfig
 metadata:
-  name: aws-config
+  name: custom-config
   labels:
-    config: aws-config
+    config: dip-software
 data:
   awsAccountId: "123456789012"
   awsRegion: "us-east-1"
