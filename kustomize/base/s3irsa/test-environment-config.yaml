@@ -1,7 +1,7 @@
 apiVersion: apiextensions.crossplane.io/v1beta1
 kind: EnvironmentConfig
 metadata:
-  name: aws-test-config
+  name: hsp-addons
   labels:
     config: hsp-addons
 data:

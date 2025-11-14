@@ -21,6 +21,9 @@ spec:
       kind: Input
       spec:
         environmentConfigs:
+        - type: Reference
+          ref:
+            name: hsp-addons
         - type: Selector
           selector:
             mode: Multiple
