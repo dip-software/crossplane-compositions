@@ -15,13 +15,15 @@ The following variables are currently supported:
 - `${accountId}` - AWS Account ID
 - `${region}` - AWS Region
 - `${partition}` - AWS Partition (e.g., "aws", "aws-cn", "aws-us-gov")
+- `${oidcProvider}` - OIDC provider URL
+- `${oidcProviderArn}` - OIDC provider ARN
 
 ### Expanding the Variable List
 
 To add support for additional variables, simply update the `$supportedEnvVars` list at the top of the Go template in `helmapp-composition.yaml`:
 
 ```yaml
-{{- $supportedEnvVars := list "resourcePrefix" "clusterFqdn" "accountId" "region" "partition" "newVariable" -}}
+{{- $supportedEnvVars := list "resourcePrefix" "clusterFqdn" "accountId" "region" "partition" "oidcProvider" "oidcProviderArn" "newVariable" -}}
 ```
 
 Make sure the corresponding variable exists in your EnvironmentConfig resources.

@@ -49,7 +49,7 @@ spec:
       inline:
         template: |
           {{- /* Define supported environment variables for substitution */ -}}
-          {{- $supportedEnvVars := list "resourcePrefix" "clusterFqdn" "accountId" "region" "partition" -}}
+          {{- $supportedEnvVars := list "resourcePrefix" "clusterFqdn" "accountId" "region" "partition" "oidcProvider" "oidcProviderArn" -}}
           
           {{- /* Function to replace ${variableName} in a string with environment config values */ -}}
           {{- define "replaceEnvVars" -}}

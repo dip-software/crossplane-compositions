@@ -10,6 +10,8 @@ data:
   accountId: "123456789012"
   region: "us-east-1"
   partition: "aws"
+  oidcProvider: "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+  oidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
   tags:
     Environment: "test"
   eks:
