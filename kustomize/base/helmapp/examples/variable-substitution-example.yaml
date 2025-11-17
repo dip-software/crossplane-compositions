@@ -1,0 +1,53 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: app-with-env-vars
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
+    path: .
+    targetRevision: "0.15.0"
+    helm:
+      valuesObject:
+        replicaCount: 2
+        serviceType: "LoadBalancer"
+        # Example: Using ${resourcePrefix} for naming
+        nameOverride: "${resourcePrefix}-my-app"
+        # Example: Using ${clusterFqdn} for hostname configuration
+        httpRoute:
+          enabled: true
+          gatewayName: "shared-gateway"
+          gatewayNamespace: "gateway"
+          hostnames:
+            - "{{ include \"go-hello-world.fullname\" . }}.${clusterFqdn}"
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+        # Example: Using ${accountId} and ${region} for AWS resource references
+        annotations:
+          aws-account: "${accountId}"
+          aws-region: "${region}"
+          aws-partition: "${partition}"
+        # Example: Using ${resourcePrefix} in environment variables
+        env:
+          - name: RESOURCE_PREFIX
+            value: "${resourcePrefix}"
+          - name: CLUSTER_FQDN
+            value: "${clusterFqdn}"
+          - name: AWS_ACCOUNT_ID
+            value: "${accountId}"
+          - name: AWS_REGION
+            value: "${region}"
+          - name: AWS_PARTITION
+            value: "${partition}"
+        # Example: Combining variables in strings
+        config:
+          s3BucketName: "${resourcePrefix}-app-data-${accountId}"
+          apiEndpoint: "https://api.${clusterFqdn}"
+          arnPrefix: "arn:${partition}:s3:::${resourcePrefix}-bucket"

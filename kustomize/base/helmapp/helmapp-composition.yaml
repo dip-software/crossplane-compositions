@@ -48,6 +48,25 @@ spec:
       source: Inline
       inline:
         template: |
+          {{- /* Define supported environment variables for substitution */ -}}
+          {{- $supportedEnvVars := list "resourcePrefix" "clusterFqdn" "accountId" "region" "partition" -}}
+          
+          {{- /* Function to replace ${variableName} in a string with environment config values */ -}}
+          {{- define "replaceEnvVars" -}}
+            {{- $value := index . "value" -}}
+            {{- $env := index . "env" -}}
+            {{- $supportedVars := index . "supportedVars" -}}
+            {{- $result := $value -}}
+            {{- range $varName := $supportedVars -}}
+              {{- if (index $env $varName) -}}
+                {{- $pattern := printf "${%s}" $varName -}}
+                {{- $replacement := index $env $varName | toString -}}
+                {{- $result = $result | replace $pattern $replacement -}}
+              {{- end -}}
+            {{- end -}}
+            {{- $result -}}
+          {{- end -}}
+          
           apiVersion: argoproj.io/v1alpha1
           kind: Application
           metadata:
@@ -75,7 +94,20 @@ spec:
                 releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName }}
                 valuesObject:
                   {{- if .observed.composite.resource.spec.source.helm.valuesObject }}
-                  {{- range $key, $value := .observed.composite.resource.spec.source.helm.valuesObject }}
+                  {{- $valuesJson := toJson .observed.composite.resource.spec.source.helm.valuesObject }}
+                  {{- $env := dict }}
+                  {{- if (index .context "apiextensions.crossplane.io/environment") }}
+                  {{- $env = index .context "apiextensions.crossplane.io/environment" }}
+                  {{- end }}
+                  {{- $processedJson := $valuesJson }}
+                  {{- range $varName := $supportedEnvVars }}
+                  {{- if (index $env $varName) }}
+                  {{- $pattern := printf "${%s}" $varName }}
+                  {{- $replacement := index $env $varName | toString }}
+                  {{- $processedJson = $processedJson | replace $pattern $replacement }}
+                  {{- end }}
+                  {{- end }}
+                  {{- range $key, $value := ($processedJson | fromJson) }}
                   {{ $key }}: {{ toJson $value }}
                   {{- end }}
                   {{- end }}

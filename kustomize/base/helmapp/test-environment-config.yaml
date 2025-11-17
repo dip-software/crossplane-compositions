@@ -5,7 +5,9 @@ metadata:
   labels:
     config: hsp-addons
 data:
+  resourcePrefix: "test"
   clusterFqdn: "example.com"
+  accountId: "123456789012"
   region: "us-east-1"
   partition: "aws"
   tags:
