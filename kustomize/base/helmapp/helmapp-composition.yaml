@@ -221,6 +221,17 @@ spec:
   # NOTE: function-auto-ready cannot detect ArgoCD Application health status
   # because it uses custom .status.health.status field instead of standard Kubernetes conditions
   # Tracking issue: https://github.com/crossplane-contrib/function-auto-ready/issues/29
+  # 
+  # Why It Appears Broken
+  # Crossplane's function-auto-ready looks for standard Kubernetes condition fields like:
+
+  # .status.conditions[].type: "Ready"
+  # .status.conditions[].status: "True"
+  # But ArgoCD Applications use a custom health field:
+
+  # .status.health.status: "Healthy" ✅ (present and healthy)
+  # .status.conditions: (empty/not used)
+  # This is a known limitation tracked in the upstream issue.
   - step: auto-ready
     functionRef:
       name: function-auto-ready
