@@ -77,6 +77,77 @@ spec:
                 type: string
                 description: "ArgoCD project name (defaults to 'default')"
                 default: "default"
+              
+              # ArgoCD sync policy
+              syncPolicy:
+                type: object
+                description: "ArgoCD sync policy configuration"
+                properties:
+                  automated:
+                    type: object
+                    description: "Automated sync configuration"
+                    properties:
+                      prune:
+                        type: boolean
+                        description: "Enable automatic pruning of resources"
+                        default: true
+                      selfHeal:
+                        type: boolean
+                        description: "Enable automatic self-healing"
+                        default: true
+                      allowEmpty:
+                        type: boolean
+                        description: "Allow apps to have zero live resources"
+                        default: false
+                      enabled:
+                        type: boolean
+                        description: "Enable automated sync"
+                        default: true
+                  managedNamespaceMetadata:
+                    type: object
+                    description: "Controls metadata in the managed namespace (if CreateNamespace=true)"
+                    properties:
+                      labels:
+                        type: object
+                        description: "Labels to apply to the managed namespace"
+                        x-kubernetes-preserve-unknown-fields: true
+                      annotations:
+                        type: object
+                        description: "Annotations to apply to the managed namespace"
+                        x-kubernetes-preserve-unknown-fields: true
+                  retry:
+                    type: object
+                    description: "Controls failed sync retry behavior"
+                    properties:
+                      limit:
+                        type: integer
+                        description: "Maximum number of attempts for retrying a failed sync (0 = no retries)"
+                        format: int64
+                        default: 5
+                      backoff:
+                        type: object
+                        description: "Backoff strategy for retries"
+                        properties:
+                          duration:
+                            type: string
+                            description: "Amount to back off (e.g., '5s', '2m', '1h')"
+                            default: "5s"
+                          factor:
+                            type: integer
+                            description: "Factor to multiply the base duration after each failed retry"
+                            format: int64
+                            default: 2
+                          maxDuration:
+                            type: string
+                            description: "Maximum amount of time allowed for the backoff strategy (e.g., '3m')"
+                            default: "3m"
+                  syncOptions:
+                    type: array
+                    description: "Sync options"
+                    items:
+                      type: string
+                    default:
+                    - CreateNamespace=true
             
             required:
             - source

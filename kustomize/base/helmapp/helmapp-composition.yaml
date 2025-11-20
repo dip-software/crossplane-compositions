@@ -212,11 +212,64 @@ spec:
               server: https://kubernetes.default.svc
               namespace: {{ .observed.composite.resource.metadata.namespace }}
             syncPolicy:
+              {{- if .observed.composite.resource.spec.syncPolicy }}
+              {{- $syncPolicy := .observed.composite.resource.spec.syncPolicy }}
+              {{- if $syncPolicy.automated }}
+              automated:
+                prune: {{ if hasKey $syncPolicy.automated "prune" }}{{ $syncPolicy.automated.prune }}{{ else }}true{{ end }}
+                selfHeal: {{ if hasKey $syncPolicy.automated "selfHeal" }}{{ $syncPolicy.automated.selfHeal }}{{ else }}true{{ end }}
+                allowEmpty: {{ if hasKey $syncPolicy.automated "allowEmpty" }}{{ $syncPolicy.automated.allowEmpty }}{{ else }}false{{ end }}
+                enabled: {{ if hasKey $syncPolicy.automated "enabled" }}{{ $syncPolicy.automated.enabled }}{{ else }}true{{ end }}
+              {{- else }}
               automated:
                 prune: true
                 selfHeal: true
+                allowEmpty: false
+                enabled: true
+              {{- end }}
+              {{- if $syncPolicy.managedNamespaceMetadata }}
+              managedNamespaceMetadata:
+                {{- if $syncPolicy.managedNamespaceMetadata.labels }}
+                labels:
+                  {{- range $key, $value := $syncPolicy.managedNamespaceMetadata.labels }}
+                  {{ $key }}: {{ $value | quote }}
+                  {{- end }}
+                {{- end }}
+                {{- if $syncPolicy.managedNamespaceMetadata.annotations }}
+                annotations:
+                  {{- range $key, $value := $syncPolicy.managedNamespaceMetadata.annotations }}
+                  {{ $key }}: {{ $value | quote }}
+                  {{- end }}
+                {{- end }}
+              {{- end }}
+              {{- if $syncPolicy.retry }}
+              retry:
+                limit: {{ default 5 $syncPolicy.retry.limit }}
+                {{- if $syncPolicy.retry.backoff }}
+                backoff:
+                  duration: {{ default "5s" $syncPolicy.retry.backoff.duration | quote }}
+                  factor: {{ default 2 $syncPolicy.retry.backoff.factor }}
+                  maxDuration: {{ default "3m" $syncPolicy.retry.backoff.maxDuration | quote }}
+                {{- end }}
+              {{- end }}
+              {{- if $syncPolicy.syncOptions }}
+              syncOptions:
+              {{- range $syncPolicy.syncOptions }}
+              - {{ . }}
+              {{- end }}
+              {{- else }}
               syncOptions:
               - CreateNamespace=true
+              {{- end }}
+              {{- else }}
+              automated:
+                prune: true
+                selfHeal: true
+                allowEmpty: false
+                enabled: true
+              syncOptions:
+              - CreateNamespace=true
+              {{- end }}
   
   # NOTE: function-auto-ready cannot detect ArgoCD Application health status
   # because it uses custom .status.health.status field instead of standard Kubernetes conditions

@@ -1,0 +1,26 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: syncpolicy-with-retry
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
+    targetRevision: "0.15.0"
+    helm:
+      valuesObject:
+        replicaCount: 1
+  # Sync policy with custom retry settings
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: "10s"
+        factor: 3
+        maxDuration: "5m"
