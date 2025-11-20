@@ -210,7 +210,7 @@ spec:
                   {{- end }}
             destination:
               server: https://kubernetes.default.svc
-              namespace: {{ .observed.composite.resource.metadata.namespace }}
+              namespace: {{ if .observed.composite.resource.spec.destination }}{{ default .observed.composite.resource.metadata.namespace .observed.composite.resource.spec.destination.namespace }}{{ else }}{{ .observed.composite.resource.metadata.namespace }}{{ end }}
             syncPolicy:
               {{- if .observed.composite.resource.spec.syncPolicy }}
               {{- $syncPolicy := .observed.composite.resource.spec.syncPolicy }}

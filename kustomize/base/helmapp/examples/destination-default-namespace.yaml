@@ -1,0 +1,16 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: destination-default-namespace
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
+    targetRevision: "0.15.0"
+    helm:
+      valuesObject:
+        replicaCount: 1
+  # No destination specified - should use CR namespace (argocd)

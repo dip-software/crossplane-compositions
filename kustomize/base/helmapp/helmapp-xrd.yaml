@@ -78,6 +78,15 @@ spec:
                 description: "ArgoCD project name (defaults to 'default')"
                 default: "default"
               
+              # ArgoCD destination configuration
+              destination:
+                type: object
+                description: "ArgoCD destination configuration"
+                properties:
+                  namespace:
+                    type: string
+                    description: "Target namespace for the application's resources (defaults to the HelmApplication CR namespace)"
+              
               # ArgoCD sync policy
               syncPolicy:
                 type: object
