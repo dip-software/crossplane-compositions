@@ -1,0 +1,28 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: test-nested-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/example/test-chart"
+    targetRevision: "1.0.0"
+    helm:
+      valuesObject:
+        # Test case: nested config object with variable substitution
+        config:
+          awsAccountId: ${accountId}
+          awsRegion: ${region}
+          clusterName: ${resourcePrefix}
+        # Additional nested structures
+        serviceAccount:
+          annotations:
+            eks.amazonaws.com/role-arn: "arn:${partition}:iam::${accountId}:role/my-role"
+        # Simple values
+        replicaCount: 3
+        image:
+          repository: "example/app"
+          tag: "latest"

@@ -92,25 +92,25 @@ spec:
               {{- end }}
               helm:
                 releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName }}
+                {{- if .observed.composite.resource.spec.source.helm.valuesObject }}
+                {{- $valuesJson := toJson .observed.composite.resource.spec.source.helm.valuesObject }}
+                {{- $env := dict }}
+                {{- if (index .context "apiextensions.crossplane.io/environment") }}
+                {{- $env = index .context "apiextensions.crossplane.io/environment" }}
+                {{- end }}
+                {{- $processedJson := $valuesJson }}
+                {{- range $varName := $supportedEnvVars }}
+                {{- if (index $env $varName) }}
+                {{- $pattern := printf "${%s}" $varName }}
+                {{- $replacement := index $env $varName | toString }}
+                {{- $processedJson = $processedJson | replace $pattern $replacement }}
+                {{- end }}
+                {{- end }}
                 valuesObject:
-                  {{- if .observed.composite.resource.spec.source.helm.valuesObject }}
-                  {{- $valuesJson := toJson .observed.composite.resource.spec.source.helm.valuesObject }}
-                  {{- $env := dict }}
-                  {{- if (index .context "apiextensions.crossplane.io/environment") }}
-                  {{- $env = index .context "apiextensions.crossplane.io/environment" }}
-                  {{- end }}
-                  {{- $processedJson := $valuesJson }}
-                  {{- range $varName := $supportedEnvVars }}
-                  {{- if (index $env $varName) }}
-                  {{- $pattern := printf "${%s}" $varName }}
-                  {{- $replacement := index $env $varName | toString }}
-                  {{- $processedJson = $processedJson | replace $pattern $replacement }}
-                  {{- end }}
-                  {{- end }}
-                  {{- range $key, $value := ($processedJson | fromJson) }}
+                {{- range $key, $value := ($processedJson | fromJson) }}
                   {{ $key }}: {{ toJson $value }}
-                  {{- end }}
-                  {{- end }}
+                {{- end }}
+                {{- end }}
                   {{- if (index .context "apiextensions.crossplane.io/environment") }}
                   {{- $env := index .context "apiextensions.crossplane.io/environment" }}
                   {{- $filterKeys := .observed.composite.resource.spec.source.withConfigKeys }}

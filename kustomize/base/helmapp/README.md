@@ -101,3 +101,40 @@ The composition uses Go templates to:
 4. Preserve non-string values (numbers, booleans, etc.) as-is
 
 Variables are only replaced if they exist in the EnvironmentConfig. If a variable is not found, the `${variableName}` pattern remains unchanged.
+
+## Testing Variable Substitution
+
+### Test Case: Nested Config Object
+
+The `examples/test-nested-config.yaml` file provides a test case specifically for nested configuration objects with variable substitution:
+
+```yaml
+spec:
+  source:
+    helm:
+      valuesObject:
+        config:
+          awsAccountId: ${accountId}
+          awsRegion: ${region}
+          clusterName: ${resourcePrefix}
+```
+
+This test case verifies that:
+
+1. Nested objects (like `config`) are properly preserved in the output
+2. Variable substitution works within nested structures
+3. The `valuesObject` is not rendered as an empty object (`config: {}`)
+
+### Bug Fix: Empty valuesObject Output
+
+**Issue**: Prior to the fix, when using nested objects with variable substitution, the resulting manifest would show empty objects (e.g., `config: {}`).
+
+**Root Cause**: The Go template was outputting `valuesObject:` before checking if there was content to output. The whitespace-stripping template directives (`{{-`) were preventing any content from being generated, resulting in an empty object.
+
+**Fix**: The template structure was reorganized to:
+
+1. Process the `valuesObject` and perform variable substitution first
+2. Only output the `valuesObject:` key after processing is complete
+3. Ensure the output directives preserve the actual content
+
+This ensures that nested structures with variables are properly rendered in the final ArgoCD Application manifest.
