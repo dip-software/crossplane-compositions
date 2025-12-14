@@ -25,15 +25,6 @@ spec:
       name: myapp-aurora-master-password
       key: password
     
-    # VPC configuration
-    vpcConfig:
-      subnetIds:
-        - subnet-aurora-1a
-        - subnet-aurora-1b
-        - subnet-aurora-1c
-      securityGroupIds:
-        - sg-aurora-cluster
-    
     # Backup settings
     backupRetentionPeriod: 14
     storageEncrypted: true

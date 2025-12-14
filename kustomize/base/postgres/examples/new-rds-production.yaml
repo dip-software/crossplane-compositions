@@ -31,15 +31,6 @@ spec:
       name: myapp-prod-db-master-password
       key: password
     
-    # VPC configuration (multi-AZ subnets)
-    vpcConfig:
-      subnetIds:
-        - subnet-prod-1a
-        - subnet-prod-1b
-        - subnet-prod-1c
-      securityGroupIds:
-        - sg-prod-database
-    
     # Production backup and HA settings
     backupRetentionPeriod: 30
     multiAz: true
