@@ -1,0 +1,63 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-production-db
+  namespace: myapp
+spec:
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: myapp-prod-sa
+  
+  # Database configuration - create new production RDS instance
+  database:
+    mode: create
+    identifier: myapp-prod-db
+    type: rds-instance
+    engine: postgres
+    engineVersion: "16.1"
+    databaseName: myapp_production
+    port: 5432
+    iamUsername: myapp_prod_user
+    
+    # Production instance configuration
+    instanceClass: db.r6g.large
+    allocatedStorage: 100
+    storageType: gp3
+    storageEncrypted: true
+    
+    # Master credentials from secret
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: myapp-prod-db-master-password
+      key: password
+    
+    # VPC configuration (multi-AZ subnets)
+    vpcConfig:
+      subnetIds:
+        - subnet-prod-1a
+        - subnet-prod-1b
+        - subnet-prod-1c
+      securityGroupIds:
+        - sg-prod-database
+    
+    # Production backup and HA settings
+    backupRetentionPeriod: 30
+    multiAz: true
+    publiclyAccessible: false
+  
+  # IAM permissions
+  permissions:
+    allowConnect: true
+  
+  # Write connection details to secret
+  writeConnectionSecretToRef:
+    name: myapp-prod-db-connection
+  
+  # Tags for AWS resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    CostCenter: "engineering"
+    Provisioned: crossplane
+    Backup: "enabled"

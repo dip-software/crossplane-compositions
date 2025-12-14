@@ -1,0 +1,28 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-db-access
+  namespace: myapp
+spec:
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: myapp-sa
+  
+  # Database configuration - using existing RDS instance
+  database:
+    identifier: myapp-production-db
+    type: rds-instance
+    engine: postgres
+    databaseName: application
+    port: 5432
+    iamUsername: myapp_user
+  
+  # IAM permissions
+  permissions:
+    allowConnect: true
+  
+  # Tags for IAM resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform

@@ -1,0 +1,29 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-aurora-access
+  namespace: myapp
+spec:
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: myapp-sa
+  
+  # Database configuration - using existing Aurora PostgreSQL cluster
+  database:
+    identifier: myapp-aurora-cluster
+    type: aurora-cluster
+    engine: postgres
+    databaseName: application
+    port: 5432
+    iamUsername: myapp_user
+  
+  # IAM permissions
+  permissions:
+    allowConnect: true
+  
+  # Tags for IAM resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    DatabaseType: aurora-postgresql
