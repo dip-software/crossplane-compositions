@@ -1,0 +1,287 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: postgres.dip.io
+spec:
+  group: dip.io
+  names:
+    kind: Postgres
+    plural: postgres
+  # Namespace scope - compositions will be namespace-scoped
+  scope: Namespaced
+  
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              # Service Account configuration for IRSA binding
+              serviceAccount:
+                type: object
+                description: "Kubernetes ServiceAccount configuration for IRSA binding"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the Kubernetes ServiceAccount to bind with IAM role for RDS access"
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                    maxLength: 253
+                required:
+                - name
+              
+              # Database configuration
+              database:
+                type: object
+                description: "RDS PostgreSQL database configuration"
+                properties:
+                  # Create new or use existing database
+                  mode:
+                    type: string
+                    enum: ["existing", "create"]
+                    default: "existing"
+                    description: "Mode: 'existing' to use an existing database (observe only), 'create' to provision a new RDS instance"
+                  
+                  # RDS instance identifier or Aurora cluster identifier
+                  identifier:
+                    type: string
+                    description: "RDS instance identifier or Aurora cluster identifier (e.g., 'myapp-production-db'). For create mode, this will be the name of the new instance."
+                  
+                  # Database type (rds-instance or aurora-cluster)
+                  type:
+                    type: string
+                    enum: ["rds-instance", "aurora-cluster"]
+                    default: "rds-instance"
+                    description: "Database type: rds-instance for RDS PostgreSQL instances, aurora-cluster for Aurora PostgreSQL clusters"
+                  
+                  # Database engine (postgres)
+                  engine:
+                    type: string
+                    enum: ["postgres"]
+                    default: "postgres"
+                    description: "Database engine type (currently only postgres is supported)"
+                  
+                  # Engine version (for create mode)
+                  engineVersion:
+                    type: string
+                    description: "PostgreSQL engine version (e.g., '15.5', '16.1'). Required for create mode."
+                  
+                  # Database name (optional - for connection string)
+                  databaseName:
+                    type: string
+                    description: "Database name for application connections. For create mode, this is the initial database name."
+                  
+                  # Port (optional - defaults to 5432 for postgres)
+                  port:
+                    type: integer
+                    default: 5432
+                    description: "Database port (defaults to 5432 for PostgreSQL)"
+                  
+                  # Database resource ID for IAM policy (existing mode only)
+                  resourceId:
+                    type: string
+                    description: "RDS resource ID (e.g., 'db-ABCDEFGHIJKLMNOP123456'). Only needed for existing mode if not auto-detected."
+                  
+                  # Instance class (for create mode)
+                  instanceClass:
+                    type: string
+                    description: "RDS instance class (e.g., 'db.t3.micro', 'db.t3.small', 'db.r6g.large'). Required for create mode."
+                  
+                  # Allocated storage in GB (for create mode)
+                  allocatedStorage:
+                    type: integer
+                    description: "Allocated storage in GB (minimum 20 for PostgreSQL). Required for create mode."
+                    minimum: 20
+                  
+                  # Storage type (for create mode)
+                  storageType:
+                    type: string
+                    enum: ["gp2", "gp3", "io1"]
+                    default: "gp3"
+                    description: "Storage type: gp2 (general purpose SSD), gp3 (newer general purpose SSD), io1 (provisioned IOPS)"
+                  
+                  # Master username (for create mode)
+                  masterUsername:
+                    type: string
+                    description: "Master username for the database. Required for create mode. Note: This is different from iamUsername."
+                    pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
+                    maxLength: 63
+                  
+                  # Master password secret reference (for create mode)
+                  masterPasswordSecretRef:
+                    type: object
+                    description: "Reference to a Kubernetes secret containing the master password. Required for create mode."
+                    properties:
+                      name:
+                        type: string
+                        description: "Name of the secret"
+                      namespace:
+                        type: string
+                        description: "Namespace of the secret (defaults to same namespace as Postgres resource)"
+                      key:
+                        type: string
+                        default: "password"
+                        description: "Key in the secret containing the password"
+                    required:
+                    - name
+                  
+                  # VPC configuration (for create mode)
+                  vpcConfig:
+                    type: object
+                    description: "VPC configuration for the RDS instance. Required for create mode."
+                    properties:
+                      subnetIds:
+                        type: array
+                        description: "List of subnet IDs for the DB subnet group (must be in at least 2 different AZs)"
+                        items:
+                          type: string
+                        minItems: 2
+                      securityGroupIds:
+                        type: array
+                        description: "List of VPC security group IDs"
+                        items:
+                          type: string
+                        minItems: 1
+                    required:
+                    - subnetIds
+                    - securityGroupIds
+                  
+                  # Backup configuration (for create mode)
+                  backupRetentionPeriod:
+                    type: integer
+                    default: 7
+                    description: "Number of days to retain automated backups (0-35). Default: 7 days"
+                    minimum: 0
+                    maximum: 35
+                  
+                  # Multi-AZ deployment (for create mode)
+                  multiAz:
+                    type: boolean
+                    default: false
+                    description: "Enable Multi-AZ deployment for high availability"
+                  
+                  # Public accessibility (for create mode)
+                  publiclyAccessible:
+                    type: boolean
+                    default: false
+                    description: "Make the database publicly accessible (not recommended for production)"
+                  
+                  # Encryption at rest (for create mode)
+                  storageEncrypted:
+                    type: boolean
+                    default: true
+                    description: "Enable storage encryption at rest"
+                  
+                  # Database username for IAM authentication
+                  iamUsername:
+                    type: string
+                    description: "PostgreSQL username for IAM authentication (must be created in the database with IAM auth enabled)"
+                    pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
+                    maxLength: 63
+                
+                required:
+                - identifier
+                - iamUsername
+              
+              # IAM permissions configuration
+              permissions:
+                type: object
+                description: "IAM permissions configuration"
+                properties:
+                  # Allow connect via IAM auth
+                  allowConnect:
+                    type: boolean
+                    description: "Allow RDS IAM database authentication (rds-db:connect action)"
+                    default: true
+                  
+                  # Additional RDS IAM actions
+                  additionalActions:
+                    type: array
+                    description: "Additional RDS/IAM actions to include in the policy"
+                    items:
+                      type: string
+              
+              # Optional: Tags for created resources
+              tags:
+                type: object
+                description: "Tags to apply to created AWS resources (IAM role and policy)"
+                x-kubernetes-preserve-unknown-fields: true
+              
+              # Optional: Provider configuration override
+              providerConfigRef:
+                type: object
+                description: "Optional: Override the default provider config reference"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the ProviderConfig"
+                    default: "default"
+                  kind:
+                    type: string
+                    description: "Kind of the ProviderConfig (e.g., ClusterProviderConfig, ProviderConfig)"
+                    default: "ClusterProviderConfig"
+              
+              # Optional: Connection secret reference
+              writeConnectionSecretToRef:
+                type: object
+                description: "Optional: Write connection details (endpoint, port, database, username) to a Kubernetes secret in the same namespace"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the secret to write connection details to"
+                required:
+                - name
+            
+            required:
+            - serviceAccount
+            - database
+          
+          status:
+            type: object
+            properties:
+              dbInstanceIdentifier:
+                type: string
+                description: "RDS instance or Aurora cluster identifier"
+              dbResourceId:
+                type: string
+                description: "RDS resource ID used in IAM policy"
+              dbEndpoint:
+                type: string
+                description: "Database endpoint hostname"
+              dbPort:
+                type: integer
+                description: "Database port"
+              databaseName:
+                type: string
+                description: "Database name"
+              roleArn:
+                type: string
+                description: "ARN of the IAM role created for IRSA"
+              accountId:
+                type: string
+                description: "AWS Account ID"
+              iamUsername:
+                type: string
+                description: "IAM database username"
+              connectionString:
+                type: string
+                description: "PostgreSQL connection string (without password - use IAM auth token)"
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string

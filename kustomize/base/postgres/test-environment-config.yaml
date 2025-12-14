@@ -1,0 +1,16 @@
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: hsp-addons
+  labels:
+    config: hsp-addons
+data:
+  accountId: "123456789012"
+  region: "us-east-1"
+  clusterName: "test-cluster"
+  eks:
+    oidcProvider: "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
+    oidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123456"
+  tags:
+    Environment: "test"
+    ManagedBy: "Crossplane"

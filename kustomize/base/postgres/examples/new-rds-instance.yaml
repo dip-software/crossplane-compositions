@@ -1,0 +1,56 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-new-db
+  namespace: myapp
+spec:
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: myapp-sa
+  
+  # Database configuration - create new RDS instance
+  database:
+    mode: create
+    identifier: myapp-development-db
+    type: rds-instance
+    engine: postgres
+    engineVersion: "15.5"
+    databaseName: myapp_dev
+    port: 5432
+    iamUsername: myapp_user
+    
+    # Instance configuration
+    instanceClass: db.t3.micro
+    allocatedStorage: 20
+    storageType: gp3
+    storageEncrypted: true
+    
+    # Master credentials
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: myapp-db-master-password
+      key: password
+    
+    # VPC configuration
+    vpcConfig:
+      subnetIds:
+        - subnet-abc123
+        - subnet-def456
+      securityGroupIds:
+        - sg-xyz789
+    
+    # Backup and HA
+    backupRetentionPeriod: 7
+    multiAz: false
+    publiclyAccessible: false
+  
+  # IAM permissions
+  permissions:
+    allowConnect: true
+  
+  # Tags for AWS resources
+  tags:
+    Application: myapp
+    Environment: development
+    Team: platform
+    Provisioned: crossplane
