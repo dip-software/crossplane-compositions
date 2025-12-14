@@ -31,14 +31,6 @@ spec:
       name: myapp-db-master-password
       key: password
     
-    # VPC configuration
-    vpcConfig:
-      subnetIds:
-        - subnet-abc123
-        - subnet-def456
-      securityGroupIds:
-        - sg-xyz789
-    
     # Backup and HA
     backupRetentionPeriod: 7
     multiAz: false

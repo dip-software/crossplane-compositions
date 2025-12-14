@@ -129,27 +129,6 @@ spec:
                     required:
                     - name
                   
-                  # VPC configuration (for create mode)
-                  vpcConfig:
-                    type: object
-                    description: "VPC configuration for the RDS instance. Required for create mode."
-                    properties:
-                      subnetIds:
-                        type: array
-                        description: "List of subnet IDs for the DB subnet group (must be in at least 2 different AZs)"
-                        items:
-                          type: string
-                        minItems: 2
-                      securityGroupIds:
-                        type: array
-                        description: "List of VPC security group IDs"
-                        items:
-                          type: string
-                        minItems: 1
-                    required:
-                    - subnetIds
-                    - securityGroupIds
-                  
                   # Backup configuration (for create mode)
                   backupRetentionPeriod:
                     type: integer

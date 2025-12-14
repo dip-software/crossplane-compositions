@@ -284,9 +284,12 @@ The composition can provision new RDS PostgreSQL instances or Aurora clusters wi
 
 Before creating a new database, you need:
 
-1. **VPC and Subnets**: At least 2 subnets in different availability zones
-2. **Security Groups**: Security group IDs that allow database traffic
-3. **Master Password Secret**: A Kubernetes secret containing the master password
+1. **Environment Configuration**: An `EnvironmentConfig` resource with VPC and security group details (automatically provided by the platform)
+2. **Master Password Secret**: A Kubernetes secret containing the master password
+
+The composition automatically extracts VPC configuration from the `EnvironmentConfig`:
+- Database subnet IDs from `servicesVpc.subnetGroups.database.subnet_ids`
+- Database security group from `servicesVpc.securityGroups.database.id`
 
 #### Create Master Password Secret
 
@@ -343,14 +346,6 @@ spec:
       name: myapp-db-master-password
       key: password
     
-    # VPC configuration
-    vpcConfig:
-      subnetIds:
-        - subnet-abc123
-        - subnet-def456
-      securityGroupIds:
-        - sg-xyz789
-    
     # Backup and HA
     backupRetentionPeriod: 7
     multiAz: false
@@ -396,15 +391,6 @@ spec:
     masterPasswordSecretRef:
       name: myapp-prod-db-master-password
     
-    # Multi-AZ VPC configuration
-    vpcConfig:
-      subnetIds:
-        - subnet-prod-1a
-        - subnet-prod-1b
-        - subnet-prod-1c
-      securityGroupIds:
-        - sg-prod-database
-    
     # Production settings
     backupRetentionPeriod: 30
     multiAz: true
@@ -447,15 +433,6 @@ spec:
     masterPasswordSecretRef:
       name: myapp-aurora-master-password
     
-    # VPC configuration
-    vpcConfig:
-      subnetIds:
-        - subnet-aurora-1a
-        - subnet-aurora-1b
-        - subnet-aurora-1c
-      securityGroupIds:
-        - sg-aurora-cluster
-    
     # Backup settings
     backupRetentionPeriod: 14
     storageEncrypted: true
@@ -478,14 +455,14 @@ spec:
 | `storageType` | No | `gp3` | Storage type: gp2, gp3, io1 |
 | `masterUsername` | Yes* | - | Master database username |
 | `masterPasswordSecretRef` | Yes* | - | Reference to password secret |
-| `vpcConfig.subnetIds` | Yes* | - | At least 2 subnet IDs in different AZs |
-| `vpcConfig.securityGroupIds` | Yes* | - | Security group IDs |
 | `backupRetentionPeriod` | No | `7` | Backup retention days (0-35) |
 | `multiAz` | No | `false` | Enable Multi-AZ deployment |
 | `publiclyAccessible` | No | `false` | Make database publicly accessible |
 | `storageEncrypted` | No | `true` | Enable encryption at rest |
 
 *Required only when `mode: create`
+
+**Note:** VPC configuration (subnets and security groups) is automatically extracted from the `environmentConfig` resource. The composition uses the database subnet group and database security group defined in the environment configuration.
 
 ## Connecting to the Database
 

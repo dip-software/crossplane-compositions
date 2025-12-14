@@ -78,11 +78,19 @@ spec:
           {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
           {{- $dbMasterUsername := $xr.spec.database.masterUsername | default "" }}
           {{- $dbMasterPasswordSecret := $xr.spec.database.masterPasswordSecretRef }}
-          {{- $dbVpcConfig := $xr.spec.database.vpcConfig }}
           {{- $dbBackupRetention := $xr.spec.database.backupRetentionPeriod | default 7 }}
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
           {{- $dbPubliclyAccessible := $xr.spec.database.publiclyAccessible | default false }}
           {{- $dbStorageEncrypted := $xr.spec.database.storageEncrypted | default true }}
+          
+          {{- /* Extract VPC configuration from environmentConfig */ -}}
+          {{- $servicesVpc := index $env "servicesVpc" | default dict }}
+          {{- $securityGroups := index $servicesVpc "securityGroups" | default dict }}
+          {{- $databaseSg := index $securityGroups "database" | default dict }}
+          {{- $databaseSecurityGroupId := index $databaseSg "id" | default "" }}
+          {{- $subnetGroups := index $servicesVpc "subnetGroups" | default dict }}
+          {{- $databaseSubnetGroup := index $subnetGroups "database" | default dict }}
+          {{- $databaseSubnetIds := index $databaseSubnetGroup "subnet_ids" | default list }}
           
           {{- $allowConnect := true }}
           {{- if $xr.spec.permissions }}
@@ -138,7 +146,7 @@ spec:
               region: {{ $awsRegion }}
               description: "Subnet group for {{ $name }} database"
               subnetIds:
-                {{- range $dbVpcConfig.subnetIds }}
+                {{- range $databaseSubnetIds }}
                 - {{ . }}
                 {{- end }}
               tags:
@@ -182,9 +190,7 @@ spec:
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
               vpcSecurityGroupIds:
-                {{- range $dbVpcConfig.securityGroupIds }}
-                - {{ . }}
-                {{- end }}
+                - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
               multiAz: {{ $dbMultiAz }}
               publiclyAccessible: {{ $dbPubliclyAccessible }}
@@ -249,9 +255,7 @@ spec:
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
               vpcSecurityGroupIds:
-                {{- range $dbVpcConfig.securityGroupIds }}
-                - {{ . }}
-                {{- end }}
+                - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
               storageEncrypted: {{ $dbStorageEncrypted }}
               iamDatabaseAuthenticationEnabled: true
