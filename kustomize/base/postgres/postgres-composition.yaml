@@ -358,12 +358,6 @@ spec:
     input:
       apiVersion: pt.fn.crossplane.io/v1beta1
       kind: Resources
-      patchSets:
-      - name: common-status-patches
-        patches:
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.database.iamUsername
-          toFieldPath: status.iamUsername
       resources:
       - name: rds-instance
         base:
@@ -383,8 +377,6 @@ spec:
           value: "Use IAM authentication to generate token"
           name: password-note
         patches:
-        - type: PatchSet
-          patchSetName: common-status-patches
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.id
           toFieldPath: status.dbInstanceIdentifier
@@ -400,6 +392,9 @@ spec:
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.dbName
           toFieldPath: status.databaseName
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.database.iamUsername
+          toFieldPath: status.iamUsername
         - type: FromCompositeFieldPath
           fromFieldPath: spec.writeConnectionSecretToRef
           toFieldPath: spec.writeConnectionSecretToRef
@@ -423,8 +418,6 @@ spec:
           value: "Use IAM authentication to generate token"
           name: password-note
         patches:
-        - type: PatchSet
-          patchSetName: common-status-patches
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.id
           toFieldPath: status.dbInstanceIdentifier
@@ -440,6 +433,9 @@ spec:
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.databaseName
           toFieldPath: status.databaseName
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.database.iamUsername
+          toFieldPath: status.iamUsername
         - type: FromCompositeFieldPath
           fromFieldPath: spec.writeConnectionSecretToRef
           toFieldPath: spec.writeConnectionSecretToRef
