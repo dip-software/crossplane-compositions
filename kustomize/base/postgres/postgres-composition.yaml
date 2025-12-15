@@ -128,7 +128,7 @@ spec:
           {{- $_ := set $tags "Database" $dbIdentifier }}
           
           {{- $providerConfigName := "default" }}
-          {{- $providerConfigKind := "ClusterProviderConfig" }}
+          {{- $providerConfigKind := "ProviderConfig" }}
           {{- if $xr.spec.providerConfigRef }}
           {{- if $xr.spec.providerConfigRef.name }}
           {{- $providerConfigName = $xr.spec.providerConfigRef.name }}
@@ -146,6 +146,7 @@ spec:
           kind: SubnetGroup
           metadata:
             name: {{ $name }}-subnet-group
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: rds-subnet-group
           spec:
@@ -169,11 +170,13 @@ spec:
           kind: Instance
           metadata:
             name: {{ $name }}-rds-instance
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: rds-instance
               crossplane.io/external-name: {{ $dbIdentifier }}
           spec:
             forProvider:
+              identifier: {{ $dbIdentifier }}
               region: {{ $awsRegion }}
               engine: {{ $dbEngine }}
               engineVersion: {{ $dbEngineVersion | quote }}
@@ -187,11 +190,6 @@ spec:
               username: {{ $dbMasterUsername }}
               passwordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
-                {{- if $dbMasterPasswordSecret.namespace }}
-                namespace: {{ $dbMasterPasswordSecret.namespace }}
-                {{- else }}
-                namespace: {{ $namespace }}
-                {{- end }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
               port: {{ $dbPort }}
               dbSubnetGroupNameRef:
@@ -218,6 +216,7 @@ spec:
           kind: Instance
           metadata:
             name: {{ $name }}-rds-instance
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: rds-instance
               crossplane.io/external-name: {{ $dbIdentifier }}
@@ -235,6 +234,7 @@ spec:
           kind: Cluster
           metadata:
             name: {{ $name }}-rds-cluster
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: rds-cluster
               crossplane.io/external-name: {{ $dbIdentifier }}
@@ -243,6 +243,7 @@ spec:
             managementPolicies: ["Observe"]
             {{- end }}
             forProvider:
+              clusterIdentifier: {{ $dbIdentifier }}
               region: {{ $awsRegion }}
               {{- if eq $dbMode "create" }}
               engine: aurora-postgresql
@@ -253,11 +254,7 @@ spec:
               masterUsername: {{ $dbMasterUsername }}
               masterPasswordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
-                {{- if $dbMasterPasswordSecret.namespace }}
-                namespace: {{ $dbMasterPasswordSecret.namespace }}
-                {{- else }}
-                namespace: {{ $namespace }}
-                {{- end }}
+
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
@@ -284,6 +281,7 @@ spec:
           kind: Role
           metadata:
             name: {{ $name }}-irsa-role
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: iam-role
           spec:
@@ -304,6 +302,7 @@ spec:
           kind: Policy
           metadata:
             name: {{ $name }}-rds-policy
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: iam-policy
           spec:
@@ -339,6 +338,7 @@ spec:
           kind: RolePolicyAttachment
           metadata:
             name: {{ $name }}-role-policy-attachment
+            namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: iam-role-policy-attachment
           spec:
@@ -359,76 +359,6 @@ spec:
       apiVersion: pt.fn.crossplane.io/v1beta1
       kind: Resources
       resources:
-      - name: rds-instance
-        connectionDetails:
-        - type: FromFieldPath
-          fromFieldPath: status.atProvider.endpoint
-          name: endpoint
-        - type: FromFieldPath
-          fromFieldPath: status.atProvider.port
-          name: port
-        - type: FromFieldPath
-          fromFieldPath: status.atProvider.dbName
-          name: database
-        - type: FromValue
-          value: "Use IAM authentication to generate token"
-          name: password-note
-        patches:
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.id
-          toFieldPath: status.dbInstanceIdentifier
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.resourceId
-          toFieldPath: status.dbResourceId
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.endpoint
-          toFieldPath: status.dbEndpoint
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.port
-          toFieldPath: status.dbPort
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.dbName
-          toFieldPath: status.databaseName
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.writeConnectionSecretToRef
-          toFieldPath: spec.writeConnectionSecretToRef
-        readinessChecks:
-        - type: None
-      - name: rds-cluster
-        connectionDetails:
-        - type: FromFieldPath
-          fromFieldPath: status.atProvider.endpoint
-          name: endpoint
-        - type: FromFieldPath
-          fromFieldPath: status.atProvider.port
-          name: port
-        - type: FromFieldPath
-          fromFieldPath: status.atProvider.databaseName
-          name: database
-        - type: FromValue
-          value: "Use IAM authentication to generate token"
-          name: password-note
-        patches:
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.id
-          toFieldPath: status.dbInstanceIdentifier
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.clusterResourceId
-          toFieldPath: status.dbResourceId
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.endpoint
-          toFieldPath: status.dbEndpoint
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.port
-          toFieldPath: status.dbPort
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.databaseName
-          toFieldPath: status.databaseName
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.writeConnectionSecretToRef
-          toFieldPath: spec.writeConnectionSecretToRef
-        readinessChecks:
-        - type: None
       - name: iam-role
         patches:
         - type: ToCompositeFieldPath
