@@ -393,9 +393,6 @@ spec:
           fromFieldPath: status.atProvider.dbName
           toFieldPath: status.databaseName
         - type: FromCompositeFieldPath
-          fromFieldPath: spec.database.iamUsername
-          toFieldPath: status.iamUsername
-        - type: FromCompositeFieldPath
           fromFieldPath: spec.writeConnectionSecretToRef
           toFieldPath: spec.writeConnectionSecretToRef
         readinessChecks:
@@ -433,9 +430,6 @@ spec:
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.databaseName
           toFieldPath: status.databaseName
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.database.iamUsername
-          toFieldPath: status.iamUsername
         - type: FromCompositeFieldPath
           fromFieldPath: spec.writeConnectionSecretToRef
           toFieldPath: spec.writeConnectionSecretToRef
