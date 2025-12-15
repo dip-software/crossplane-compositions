@@ -39,17 +39,15 @@ spec:
                 type: object
                 description: "RDS PostgreSQL database configuration"
                 properties:
-                  # Create new or use existing database
-                  mode:
-                    type: string
-                    enum: ["existing", "create"]
-                    default: "existing"
-                    description: "Mode: 'existing' to use an existing database (observe only), 'create' to provision a new RDS instance"
-                  
-                  # RDS instance identifier or Aurora cluster identifier
+                  # Identifier for creating new database
                   identifier:
                     type: string
-                    description: "RDS instance identifier or Aurora cluster identifier (e.g., 'myapp-production-db'). For create mode, this will be the name of the new instance."
+                    description: "Name for the new RDS instance or Aurora cluster to create (e.g., 'myapp-development-db'). Use this when provisioning a new database."
+                  
+                  # Identifier for existing database (determines mode)
+                  existingIdentifier:
+                    type: string
+                    description: "RDS instance identifier or Aurora cluster identifier of an existing database to observe (e.g., 'myapp-production-db'). If provided, the composition will observe the existing database instead of creating a new one."
                   
                   # Database type (rds-instance or aurora-cluster)
                   type:
@@ -65,15 +63,15 @@ spec:
                     default: "postgres"
                     description: "Database engine type (currently only postgres is supported)"
                   
-                  # Engine version (for create mode)
+                  # Engine version (for new databases)
                   engineVersion:
                     type: string
-                    description: "PostgreSQL engine version (e.g., '15.5', '16.1'). Required for create mode."
+                    description: "PostgreSQL engine version (e.g., '15.5', '16.1'). Required when creating a new database."
                   
                   # Database name (optional - for connection string)
                   databaseName:
                     type: string
-                    description: "Database name for application connections. For create mode, this is the initial database name."
+                    description: "Database name for application connections. When creating a new database, this is the initial database name."
                   
                   # Port (optional - defaults to 5432 for postgres)
                   port:
@@ -81,40 +79,40 @@ spec:
                     default: 5432
                     description: "Database port (defaults to 5432 for PostgreSQL)"
                   
-                  # Database resource ID for IAM policy (existing mode only)
+                  # Database resource ID for IAM policy (for existing databases only)
                   resourceId:
                     type: string
-                    description: "RDS resource ID (e.g., 'db-ABCDEFGHIJKLMNOP123456'). Only needed for existing mode if not auto-detected."
+                    description: "RDS resource ID (e.g., 'db-ABCDEFGHIJKLMNOP123456'). Only needed when using existingIdentifier if not auto-detected."
                   
-                  # Instance class (for create mode)
+                  # Instance class (for new databases)
                   instanceClass:
                     type: string
-                    description: "RDS instance class (e.g., 'db.t3.micro', 'db.t3.small', 'db.r6g.large'). Required for create mode."
+                    description: "RDS instance class (e.g., 'db.t3.micro', 'db.t3.small', 'db.r6g.large'). Required when creating a new database."
                   
-                  # Allocated storage in GB (for create mode)
+                  # Allocated storage in GB (for new databases)
                   allocatedStorage:
                     type: integer
-                    description: "Allocated storage in GB (minimum 20 for PostgreSQL). Required for create mode."
+                    description: "Allocated storage in GB (minimum 20 for PostgreSQL). Required when creating a new database."
                     minimum: 20
                   
-                  # Storage type (for create mode)
+                  # Storage type (for new databases)
                   storageType:
                     type: string
                     enum: ["gp2", "gp3", "io1"]
                     default: "gp3"
                     description: "Storage type: gp2 (general purpose SSD), gp3 (newer general purpose SSD), io1 (provisioned IOPS)"
                   
-                  # Master username (for create mode)
+                  # Master username (for new databases)
                   masterUsername:
                     type: string
-                    description: "Master username for the database. Required for create mode. Note: This is different from iamUsername."
+                    description: "Master username for the database. Required when creating a new database. Note: This is different from iamUsername."
                     pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
                     maxLength: 63
                   
-                  # Master password secret reference (for create mode)
+                  # Master password secret reference (for new databases)
                   masterPasswordSecretRef:
                     type: object
-                    description: "Reference to a Kubernetes secret containing the master password. Required for create mode."
+                    description: "Reference to a Kubernetes secret containing the master password. Required when creating a new database."
                     properties:
                       name:
                         type: string
@@ -129,7 +127,7 @@ spec:
                     required:
                     - name
                   
-                  # Backup configuration (for create mode)
+                  # Backup configuration (for new databases)
                   backupRetentionPeriod:
                     type: integer
                     default: 7
@@ -137,19 +135,19 @@ spec:
                     minimum: 0
                     maximum: 35
                   
-                  # Multi-AZ deployment (for create mode)
+                  # Multi-AZ deployment (for new databases)
                   multiAz:
                     type: boolean
                     default: false
                     description: "Enable Multi-AZ deployment for high availability"
                   
-                  # Public accessibility (for create mode)
+                  # Public accessibility (for new databases)
                   publiclyAccessible:
                     type: boolean
                     default: false
                     description: "Make the database publicly accessible (not recommended for production)"
                   
-                  # Encryption at rest (for create mode)
+                  # Encryption at rest (for new databases)
                   storageEncrypted:
                     type: boolean
                     default: true
@@ -163,7 +161,6 @@ spec:
                     maxLength: 63
                 
                 required:
-                - identifier
                 - iamUsername
               
               # IAM permissions configuration

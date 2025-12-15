@@ -62,8 +62,15 @@ spec:
           {{- $eksOidcProvider := index $eks "oidcProvider" | default "" }}
           {{- $eksOidcProviderArn := index $eks "oidcProviderArn" | default "" }}
           
-          {{- $dbMode := $xr.spec.database.mode | default "existing" }}
-          {{- $dbIdentifier := $xr.spec.database.identifier }}
+          {{- /* Determine mode based on existingIdentifier presence */ -}}
+          {{- $existingIdentifier := $xr.spec.database.existingIdentifier | default "" }}
+          {{- $dbMode := "create" }}
+          {{- $dbIdentifier := $xr.spec.database.identifier | default "" }}
+          {{- if $existingIdentifier }}
+          {{- $dbMode = "existing" }}
+          {{- $dbIdentifier = $existingIdentifier }}
+          {{- end }}
+          
           {{- $dbType := $xr.spec.database.type | default "rds-instance" }}
           {{- $dbEngine := $xr.spec.database.engine | default "postgres" }}
           {{- $dbPort := $xr.spec.database.port | default 5432 }}
@@ -71,7 +78,7 @@ spec:
           {{- $databaseName := $xr.spec.database.databaseName | default "" }}
           {{- $dbResourceId := $xr.spec.database.resourceId | default "" }}
           
-          {{- /* Create mode variables */ -}}
+          {{- /* New database variables */ -}}
           {{- $dbEngineVersion := $xr.spec.database.engineVersion | default "" }}
           {{- $dbInstanceClass := $xr.spec.database.instanceClass | default "" }}
           {{- $dbAllocatedStorage := $xr.spec.database.allocatedStorage | default 20 }}

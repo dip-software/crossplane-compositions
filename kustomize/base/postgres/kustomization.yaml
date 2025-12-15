@@ -4,4 +4,3 @@ kind: Kustomization
 resources:
   - postgres-xrd.yaml
   - postgres-composition.yaml
-  - functions.yaml

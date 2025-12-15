@@ -21,15 +21,15 @@ This Crossplane v2 composition provides a complete solution for **AWS RDS Postgr
 
 ## Usage Modes
 
-The composition supports two modes:
+The composition supports two modes determined by which identifier field you use:
 
-### Mode 1: **Use Existing Database** (`mode: existing`)
+### Mode 1: **Use Existing Database** (specify `existingIdentifier`)
 - Observes existing RDS instance or Aurora cluster
 - Creates only IAM resources (role, policy)
 - Database must have IAM authentication already enabled
 - Ideal for production databases managed outside Crossplane
 
-### Mode 2: **Create New Database** (`mode: create`)
+### Mode 2: **Create New Database** (specify `identifier`)
 - Provisions new RDS instance or Aurora cluster
 - Configures IAM authentication automatically
 - Creates DB subnet group and manages networking
@@ -37,7 +37,7 @@ The composition supports two modes:
 
 ## Architecture
 
-### For Existing Databases (mode: existing):
+### For Existing Databases (with `existingIdentifier`):
 
 **Observed Resources (Read-Only):**
 1. **RDS Instance** or **Aurora Cluster** - Existing database (metadata retrieval only)
@@ -47,7 +47,7 @@ The composition supports two modes:
 3. **IAM Policy** - With RDS IAM authentication permissions (`rds-db:connect`)
 4. **IAM Role Policy Attachment** - Links the policy to the role
 
-### For New Databases (mode: create):
+### For New Databases (with `identifier`):
 
 **Created and Managed Resources:**
 1. **RDS Subnet Group** - Defines subnets for the database
@@ -186,7 +186,7 @@ spec:
     name: myapp-sa
   
   database:
-    identifier: myapp-production-db
+    existingIdentifier: myapp-production-db
     type: rds-instance
     engine: postgres
     databaseName: application
@@ -213,7 +213,7 @@ spec:
     name: myapp-sa
   
   database:
-    identifier: myapp-aurora-cluster
+    existingIdentifier: myapp-aurora-cluster
     type: aurora-cluster
     engine: postgres
     databaseName: application
@@ -236,7 +236,7 @@ spec:
     name: myapp-sa
   
   database:
-    identifier: myapp-production-db
+    existingIdentifier: myapp-production-db
     type: rds-instance
     iamUsername: myapp_user
     resourceId: db-ABCDEFGHIJKLMNOP123456  # Optional: provide if known
@@ -268,7 +268,7 @@ spec:
     name: analytics-reader-sa
   
   database:
-    identifier: production-main-db
+    existingIdentifier: production-main-db
     type: rds-instance
     iamUsername: readonly_user  # Database user with read-only permissions
   
@@ -278,7 +278,7 @@ spec:
 
 ## Creating New Databases
 
-The composition can provision new RDS PostgreSQL instances or Aurora clusters with `mode: create`.
+The composition can provision new RDS PostgreSQL instances or Aurora clusters by specifying the `identifier` field (without `existingIdentifier`).
 
 ### Prerequisites for Create Mode
 
@@ -326,7 +326,6 @@ spec:
     name: myapp-sa
   
   database:
-    mode: create  # Create new database
     identifier: myapp-development-db
     type: rds-instance
     engine: postgres
@@ -372,7 +371,6 @@ spec:
     name: myapp-prod-sa
   
   database:
-    mode: create
     identifier: myapp-prod-db
     type: rds-instance
     engine: postgres
@@ -420,7 +418,6 @@ spec:
     name: myapp-aurora-sa
   
   database:
-    mode: create
     identifier: myapp-aurora-prod
     type: aurora-cluster
     engine: postgres
@@ -448,7 +445,8 @@ spec:
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `mode` | No | `existing` | Set to `create` to provision new database |
+| `identifier` | No** | - | Name for new database (use this to create) |
+| `existingIdentifier` | No** | - | Existing database name (use this to observe) |
 | `engineVersion` | Yes* | - | PostgreSQL version (e.g., "15.5", "16.1") |
 | `instanceClass` | Yes* | - | Instance type (e.g., db.t3.micro, db.r6g.large) |
 | `allocatedStorage` | Yes* | - | Storage in GB (minimum 20) |
@@ -460,7 +458,8 @@ spec:
 | `publiclyAccessible` | No | `false` | Make database publicly accessible |
 | `storageEncrypted` | No | `true` | Enable encryption at rest |
 
-*Required only when `mode: create`
+*Required only when creating a new database (using `identifier`)  
+**Either `identifier` or `existingIdentifier` must be provided (not both)
 
 **Note:** VPC configuration (subnets and security groups) is automatically extracted from the `environmentConfig` resource. The composition uses the database subnet group and database security group defined in the environment configuration.
 
@@ -717,7 +716,7 @@ spec:
 6. **Audit Logging**: Enable RDS audit logging for compliance
 7. **Resource Tags**: Use tags for cost tracking and access control
 
-### For Created Databases (mode: create)
+### For Created Databases (using `identifier`)
 
 8. **Strong Master Passwords**: Use long, random passwords stored securely
 9. **Secret Management**: Never commit secrets to Git; use secret managers
