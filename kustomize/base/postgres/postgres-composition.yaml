@@ -89,6 +89,8 @@ spec:
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
           {{- $dbPubliclyAccessible := $xr.spec.database.publiclyAccessible | default false }}
           {{- $dbStorageEncrypted := $xr.spec.database.storageEncrypted | default true }}
+          {{- $dbSkipFinalSnapshot := $xr.spec.database.skipFinalSnapshot | default true }}
+          {{- $deletionPolicy := $xr.spec.deletionPolicy | default "Delete" }}
           
           {{- /* Extract VPC configuration from environmentConfig */ -}}
           {{- $servicesVpc := index $env "servicesVpc" | default dict }}
@@ -175,6 +177,7 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: rds-instance
               crossplane.io/external-name: {{ $dbIdentifier }}
           spec:
+            deletionPolicy: {{ $deletionPolicy }}
             forProvider:
               identifier: {{ $dbIdentifier }}
               region: {{ $awsRegion }}
@@ -188,9 +191,12 @@ spec:
               dbName: {{ $databaseName }}
               {{- end }}
               username: {{ $dbMasterUsername }}
+
+              {{- if $dbMasterPasswordSecret }}
               passwordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
+              {{- end }}
               port: {{ $dbPort }}
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
@@ -200,7 +206,8 @@ spec:
               multiAz: {{ $dbMultiAz }}
               publiclyAccessible: {{ $dbPubliclyAccessible }}
               iamDatabaseAuthenticationEnabled: true
-              skipFinalSnapshot: true
+
+              skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
               {{- if $tags }}
               tags:
                 {{- range $key, $value := $tags }}
@@ -221,6 +228,7 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: rds-instance
               crossplane.io/external-name: {{ $dbIdentifier }}
           spec:
+            deletionPolicy: Orphan
             managementPolicies: ["Observe"]
             forProvider:
               region: {{ $awsRegion }}
@@ -240,7 +248,10 @@ spec:
               crossplane.io/external-name: {{ $dbIdentifier }}
           spec:
             {{- if eq $dbMode "existing" }}
+            deletionPolicy: Orphan
             managementPolicies: ["Observe"]
+            {{- else }}
+            deletionPolicy: {{ $deletionPolicy }}
             {{- end }}
             forProvider:
               clusterIdentifier: {{ $dbIdentifier }}
@@ -252,10 +263,11 @@ spec:
               databaseName: {{ $databaseName }}
               {{- end }}
               masterUsername: {{ $dbMasterUsername }}
+              {{- if $dbMasterPasswordSecret }}
               masterPasswordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
-
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
+              {{- end }}
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
               vpcSecurityGroupIds:
@@ -263,7 +275,8 @@ spec:
               backupRetentionPeriod: {{ $dbBackupRetention }}
               storageEncrypted: {{ $dbStorageEncrypted }}
               iamDatabaseAuthenticationEnabled: true
-              skipFinalSnapshot: true
+              iamDatabaseAuthenticationEnabled: true
+              skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
               {{- if $tags }}
               tags:
                 {{- range $key, $value := $tags }}
@@ -372,9 +385,42 @@ spec:
       - name: iam-role-policy-attachment
         readinessChecks:
         - type: None
-      - name: rds-subnet-group
+      - name: rds-instance
+        patches:
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.address
+          toFieldPath: status.dbEndpoint
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.port
+          toFieldPath: status.dbPort
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.resourceId
+          toFieldPath: status.dbResourceId
+        - type: ToCompositeFieldPath
+          fromFieldPath: spec.forProvider.username
+          toFieldPath: status.iamUsername
         readinessChecks:
-        - type: None
+        - type: MatchString
+          fieldPath: status.conditions[0].status
+          matchString: "True"
+      - name: rds-cluster
+        patches:
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.endpoint
+          toFieldPath: status.dbEndpoint
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.port
+          toFieldPath: status.dbPort
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.clusterResourceId
+          toFieldPath: status.dbResourceId
+        - type: ToCompositeFieldPath
+          fromFieldPath: spec.forProvider.masterUsername
+          toFieldPath: status.iamUsername
+        readinessChecks:
+        - type: MatchString
+          fieldPath: status.conditions[0].status
+          matchString: "True"
   
   # Auto-ready function to mark composition as ready when all resources are ready
   - step: auto-ready
