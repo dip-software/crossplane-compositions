@@ -10,7 +10,7 @@ spec:
   
   # Database configuration
   database:
-    identifier: myapp-special-db
+    existingIdentifier: myapp-special-db
     type: rds-instance
     engine: postgres
     databaseName: special_db

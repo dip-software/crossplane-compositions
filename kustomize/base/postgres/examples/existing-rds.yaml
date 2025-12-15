@@ -10,7 +10,7 @@ spec:
   
   # Database configuration - using existing RDS instance
   database:
-    identifier: myapp-production-db
+    existingIdentifier: myapp-production-db
     type: rds-instance
     engine: postgres
     databaseName: application

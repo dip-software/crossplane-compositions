@@ -10,7 +10,7 @@ spec:
   
   # Database configuration - using existing Aurora PostgreSQL cluster
   database:
-    identifier: myapp-aurora-cluster
+    existingIdentifier: myapp-aurora-cluster
     type: aurora-cluster
     engine: postgres
     databaseName: application
