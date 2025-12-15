@@ -360,9 +360,6 @@ spec:
       kind: Resources
       resources:
       - name: rds-instance
-        base:
-          apiVersion: rds.aws.m.upbound.io/v1beta1
-          kind: Instance
         connectionDetails:
         - type: FromFieldPath
           fromFieldPath: status.atProvider.endpoint
@@ -398,9 +395,6 @@ spec:
         readinessChecks:
         - type: None
       - name: rds-cluster
-        base:
-          apiVersion: rds.aws.m.upbound.io/v1beta1
-          kind: Cluster
         connectionDetails:
         - type: FromFieldPath
           fromFieldPath: status.atProvider.endpoint
@@ -436,9 +430,6 @@ spec:
         readinessChecks:
         - type: None
       - name: iam-role
-        base:
-          apiVersion: iam.aws.m.upbound.io/v1beta1
-          kind: Role
         patches:
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.arn
@@ -446,21 +437,12 @@ spec:
         readinessChecks:
         - type: None
       - name: iam-policy
-        base:
-          apiVersion: iam.aws.m.upbound.io/v1beta1
-          kind: Policy
         readinessChecks:
         - type: None
       - name: iam-role-policy-attachment
-        base:
-          apiVersion: iam.aws.m.upbound.io/v1beta1
-          kind: RolePolicyAttachment
         readinessChecks:
         - type: None
       - name: rds-subnet-group
-        base:
-          apiVersion: rds.aws.m.upbound.io/v1beta1
-          kind: SubnetGroup
         readinessChecks:
         - type: None
   
