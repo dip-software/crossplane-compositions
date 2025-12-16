@@ -1,0 +1,16 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-minimal-db
+  namespace: default
+spec:
+  database:
+    identifier: myapp-minimal-db
+    engineVersion: "18.1"
+    
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: myapp-db-password
+      
+    instanceClass: db.t3.micro
+    allocatedStorage: 20
