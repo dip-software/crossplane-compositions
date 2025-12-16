@@ -376,7 +376,26 @@ spec:
       kind: Resources
       resources:
       - name: database
+        connectionDetails:
+        - type: FromFieldPath
+          name: endpoint
+          fromFieldPath: status.atProvider.address
+        - type: FromFieldPath
+          name: port
+          fromFieldPath: status.atProvider.port
+        - type: FromFieldPath
+          name: endpoint
+          fromFieldPath: status.writeService
+        - type: FromValue
+          name: port
+          value: "5432"
+        
         patches:
+        # Propagate writeConnectionSecretToRef from composite to managed resource
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.writeConnectionSecretToRef
+          toFieldPath: spec.writeConnectionSecretToRef
+        
         # DB Endpoint: Patch from address (Instance) or endpoint (Cluster)
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.address
@@ -421,22 +440,6 @@ spec:
         - type: MatchString
           fieldPath: status.phase
           matchString: "Cluster in healthy state" # Approximate check, CNPG uses phase: 'Running' or conditions
-        
-        connectionDetails:
-        # AWS RDS connection details
-        - type: FromFieldPath
-          name: endpoint
-          fromFieldPath: status.atProvider.address
-        - type: FromFieldPath
-          name: port
-          fromFieldPath: status.atProvider.port
-        # CNPG connection details (using same naming convention)
-        - type: FromFieldPath
-          name: endpoint
-          fromFieldPath: status.writeService
-        - type: FromValue
-          name: port
-          value: "5432"
   
   # Auto-ready function
   - step: auto-ready
