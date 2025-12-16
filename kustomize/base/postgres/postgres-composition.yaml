@@ -349,7 +349,7 @@ spec:
                 database: {{ $databaseName | default "app" }}
                 owner: {{ $dbMasterUsername | default "app" }}
                 secret:
-                  name: myapp-db-password
+                  name: {{ $dbMasterPasswordSecret.name }}
               {{- end }}
             
             # Storage configuration
