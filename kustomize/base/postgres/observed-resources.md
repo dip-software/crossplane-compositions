@@ -268,7 +268,7 @@ The composition populates the following status fields:
 - `dbEndpoint`: Database endpoint hostname
 - `dbPort`: Database port
 - `databaseName`: Database name
-- `iamUsername`: IAM database username
+
 - `roleArn`: ARN of the created IAM role
 - `accountId`: AWS account ID
 - `connectionString`: PostgreSQL connection string template (without password)

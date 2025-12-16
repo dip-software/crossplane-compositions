@@ -4,9 +4,7 @@ metadata:
   name: custom-permissions-db
   namespace: myapp
 spec:
-  # ServiceAccount configuration for IRSA binding
-  serviceAccount:
-    name: myapp-custom-sa
+
   
   # Database configuration
   database:
@@ -14,7 +12,6 @@ spec:
     type: rds-instance
     engine: postgres
     databaseName: special_db
-    iamUsername: custom_user
     # Provide the resource ID directly for more precise IAM policy
     resourceId: db-CUSTOMRESOURCEID123
   

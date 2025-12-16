@@ -26,6 +26,20 @@ spec:
                 type: object
                 description: "RDS PostgreSQL database configuration"
                 properties:
+                  # Cloud Provider Selection
+                  provider:
+                    type: string
+                    enum: ["aws", "cnpg"]
+                    default: "aws"
+                    description: "Cloud provider backend: 'aws' for RDS, 'cnpg' for CloudNativePG on Kubernetes."
+
+                  # T-Shirt Sizing abstraction
+                  size:
+                    type: string
+                    enum: ["small", "medium", "large"]
+                    default: "small"
+                    description: "Instance sizing abstraction. small (1vCPU/2GB), medium (2vCPU/4GB), large (4vCPU/16GB). Overridden by instanceClass if set."
+
                   # Identifier for creating new database
                   identifier:
                     type: string
@@ -41,7 +55,7 @@ spec:
                     type: string
                     enum: ["rds-instance", "aurora-cluster"]
                     default: "rds-instance"
-                    description: "Database type: rds-instance for RDS PostgreSQL instances, aurora-cluster for Aurora PostgreSQL clusters"
+                    description: "Database type: rds-instance for RDS PostgreSQL instances, aurora-cluster for Aurora PostgreSQL clusters. Ignored if provider is cnpg."
                   
                   # Database engine (postgres)
                   engine:
@@ -66,10 +80,7 @@ spec:
                     default: 5432
                     description: "Database port (defaults to 5432 for PostgreSQL)"
                   
-                  # Instance class
-                  instanceClass:
-                    type: string
-                    description: "RDS instance class (e.g., 'db.t3.micro', 'db.t3.small', 'db.r6g.large')."
+
                   
                   # Allocated storage in GB
                   allocatedStorage:
@@ -82,7 +93,7 @@ spec:
                     type: string
                     enum: ["gp2", "gp3", "io1"]
                     default: "gp3"
-                    description: "Storage type: gp2 (general purpose SSD), gp3 (newer general purpose SSD), io1 (provisioned IOPS)"
+                    description: "Storage type (AWS specific). Mapped to StorageClass for CNPG."
                   
                   # Master username
                   masterUsername:
@@ -121,7 +132,7 @@ spec:
                   multiAz:
                     type: boolean
                     default: false
-                    description: "Enable Multi-AZ deployment for high availability"
+                    description: "Enable High Availability (Multi-AZ for AWS, Replicas for CNPG)"
                   
                   # Public accessibility
                   publiclyAccessible:
@@ -129,11 +140,7 @@ spec:
                     default: false
                     description: "Make the database publicly accessible (not recommended for production)"
                   
-                  # Encryption at rest
-                  storageEncrypted:
-                    type: boolean
-                    default: true
-                    description: "Enable storage encryption at rest"
+
                 
                 required:
                 - masterUsername

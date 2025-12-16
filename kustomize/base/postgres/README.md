@@ -190,7 +190,7 @@ spec:
     type: rds-instance
     engine: postgres
     databaseName: application
-    iamUsername: myapp_user
+
   
   permissions:
     allowConnect: true
@@ -217,7 +217,7 @@ spec:
     type: aurora-cluster
     engine: postgres
     databaseName: application
-    iamUsername: myapp_user
+
   
   permissions:
     allowConnect: true
@@ -238,7 +238,7 @@ spec:
   database:
     existingIdentifier: myapp-production-db
     type: rds-instance
-    iamUsername: myapp_user
+
     resourceId: db-ABCDEFGHIJKLMNOP123456  # Optional: provide if known
   
   writeConnectionSecretToRef:
@@ -270,7 +270,7 @@ spec:
   database:
     existingIdentifier: production-main-db
     type: rds-instance
-    iamUsername: readonly_user  # Database user with read-only permissions
+
   
   permissions:
     allowConnect: true
@@ -331,7 +331,7 @@ spec:
     engine: postgres
     engineVersion: "15.5"
     databaseName: myapp_dev
-    iamUsername: myapp_user
+
     
     # Instance configuration
     instanceClass: db.t3.micro
@@ -376,7 +376,7 @@ spec:
     engine: postgres
     engineVersion: "16.1"
     databaseName: myapp_production
-    iamUsername: myapp_prod_user
+
     
     # Production instance
     instanceClass: db.r6g.large
@@ -423,7 +423,7 @@ spec:
     engine: postgres
     engineVersion: "15.5"
     databaseName: myapp_data
-    iamUsername: myapp_aurora_user
+
     
     # Master credentials
     masterUsername: postgres
@@ -589,7 +589,7 @@ Status fields include:
 - `dbEndpoint`: Database endpoint hostname
 - `dbPort`: Database port
 - `databaseName`: Database name
-- `iamUsername`: IAM database username
+
 - `roleArn`: ARN of the created IAM role (use this for ServiceAccount annotation)
 - `accountId`: AWS account ID
 - `connectionString`: PostgreSQL connection string template
