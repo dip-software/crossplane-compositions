@@ -12,7 +12,7 @@ spec:
   mode: Pipeline
   
   pipeline:
-  # Load environment configurations for AWS account, region, and EKS cluster info
+  # Load environment configurations for AWS region and VPC
   - step: load-environment-configs
     functionRef:
       name: function-environment-configs
@@ -39,7 +39,7 @@ spec:
                 type: Value
                 value: hsp-addons
   
-  # Render all AWS and Kubernetes resources using Go templating
+  # Render AWS resources using Go templating
   - step: render-resources
     functionRef:
       name: function-go-templating
@@ -52,38 +52,29 @@ spec:
           {{- $xr := .observed.composite.resource }}
           {{- $namespace := $xr.metadata.namespace }}
           {{- $name := $xr.metadata.name }}
-          {{- $serviceAccountName := $xr.spec.serviceAccount.name }}
           
           {{- $env := index .context "apiextensions.crossplane.io/environment" }}
-          {{- $awsAccountId := index $env "accountId" }}
           {{- $awsRegion := index $env "region" }}
-          {{- $eksClusterName := index $env "clusterName" }}
-          {{- $eks := index $env "eks" | default dict }}
-          {{- $eksOidcProvider := index $eks "oidcProvider" | default "" }}
-          {{- $eksOidcProviderArn := index $eks "oidcProviderArn" | default "" }}
           
-          {{- /* Determine mode based on existingIdentifier presence */ -}}
+          {{- /* Determine identifier: Use existingIdentifier if set (Import/Active Manage), else identifier (Create) */ -}}
           {{- $existingIdentifier := $xr.spec.database.existingIdentifier | default "" }}
-          {{- $dbMode := "create" }}
           {{- $dbIdentifier := $xr.spec.database.identifier | default "" }}
+          {{- $targetIdentifier := $dbIdentifier }}
           {{- if $existingIdentifier }}
-          {{- $dbMode = "existing" }}
-          {{- $dbIdentifier = $existingIdentifier }}
+          {{- $targetIdentifier = $existingIdentifier }}
           {{- end }}
           
           {{- $dbType := $xr.spec.database.type | default "rds-instance" }}
           {{- $dbEngine := $xr.spec.database.engine | default "postgres" }}
           {{- $dbPort := $xr.spec.database.port | default 5432 }}
-          {{- $iamUsername := $xr.spec.database.iamUsername }}
           {{- $databaseName := $xr.spec.database.databaseName | default "" }}
-          {{- $dbResourceId := $xr.spec.database.resourceId | default "" }}
           
-          {{- /* New database variables */ -}}
+          {{- /* Database Spec Variables */ -}}
           {{- $dbEngineVersion := $xr.spec.database.engineVersion | default "" }}
           {{- $dbInstanceClass := $xr.spec.database.instanceClass | default "" }}
           {{- $dbAllocatedStorage := $xr.spec.database.allocatedStorage | default 20 }}
           {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
-          {{- $dbMasterUsername := $xr.spec.database.masterUsername | default "" }}
+          {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
           {{- $dbMasterPasswordSecret := $xr.spec.database.masterPasswordSecretRef }}
           {{- $dbBackupRetention := $xr.spec.database.backupRetentionPeriod | default 7 }}
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
@@ -92,7 +83,7 @@ spec:
           {{- $dbSkipFinalSnapshot := $xr.spec.database.skipFinalSnapshot | default true }}
           {{- $deletionPolicy := $xr.spec.deletionPolicy | default "Delete" }}
           
-          {{- /* Extract VPC configuration from environmentConfig */ -}}
+          {{- /* Extract VPC configuration */ -}}
           {{- $servicesVpc := index $env "servicesVpc" | default dict }}
           {{- $securityGroups := index $servicesVpc "securityGroups" | default dict }}
           {{- $databaseSg := index $securityGroups "database" | default dict }}
@@ -100,23 +91,6 @@ spec:
           {{- $subnetGroups := index $servicesVpc "subnetGroups" | default dict }}
           {{- $databaseSubnetGroup := index $subnetGroups "database" | default dict }}
           {{- $databaseSubnetIds := index $databaseSubnetGroup "subnet_ids" | default list }}
-          
-          {{- $allowConnect := true }}
-          {{- if $xr.spec.permissions }}
-          {{- if hasKey $xr.spec.permissions "allowConnect" }}
-          {{- $allowConnect = $xr.spec.permissions.allowConnect }}
-          {{- end }}
-          {{- end }}
-          
-          {{- $rdsActions := list }}
-          {{- if $allowConnect }}
-          {{- $rdsActions = append $rdsActions "rds-db:connect" }}
-          {{- end }}
-          {{- if and $xr.spec.permissions $xr.spec.permissions.additionalActions }}
-          {{- range $action := $xr.spec.permissions.additionalActions }}
-          {{- $rdsActions = append $rdsActions $action }}
-          {{- end }}
-          {{- end }}
           
           {{- $tags := dict }}
           {{- if $xr.spec.tags }}
@@ -127,7 +101,7 @@ spec:
           {{- $_ := set $tags "ManagedBy" "Crossplane" }}
           {{- $_ := set $tags "Namespace" $namespace }}
           {{- $_ := set $tags "CompositeResource" $name }}
-          {{- $_ := set $tags "Database" $dbIdentifier }}
+          {{- $_ := set $tags "Database" $targetIdentifier }}
           
           {{- $providerConfigName := "default" }}
           {{- $providerConfigKind := "ProviderConfig" }}
@@ -140,9 +114,7 @@ spec:
           {{- end }}
           {{- end }}
           
-          {{- /* Create or Observe RDS instance based on mode */ -}}
-          {{- if eq $dbType "rds-instance" }}
-          {{- if eq $dbMode "create" }}
+          {{- /* Create Subnet Group */ -}}
           ---
           apiVersion: rds.aws.m.upbound.io/v1beta1
           kind: SubnetGroup
@@ -167,6 +139,7 @@ spec:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
           
+          {{- if eq $dbType "rds-instance" }}
           ---
           apiVersion: rds.aws.m.upbound.io/v1beta1
           kind: Instance
@@ -174,15 +147,20 @@ spec:
             name: {{ $name }}-rds-instance
             namespace: {{ $namespace }}
             annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: rds-instance
-              crossplane.io/external-name: {{ $dbIdentifier }}
+              gotemplating.fn.crossplane.io/composition-resource-name: database
+              crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
             deletionPolicy: {{ $deletionPolicy }}
+            {{- if $existingIdentifier }}
+            managementPolicies: ["Observe"]
+            {{- end }}
             forProvider:
-              identifier: {{ $dbIdentifier }}
+              identifier: {{ $targetIdentifier }}
               region: {{ $awsRegion }}
               engine: {{ $dbEngine }}
+              {{- if $dbEngineVersion }}
               engineVersion: {{ $dbEngineVersion | quote }}
+              {{- end }}
               instanceClass: {{ $dbInstanceClass }}
               allocatedStorage: {{ $dbAllocatedStorage }}
               storageType: {{ $dbStorageType }}
@@ -191,12 +169,10 @@ spec:
               dbName: {{ $databaseName }}
               {{- end }}
               username: {{ $dbMasterUsername }}
-
-              {{- if $dbMasterPasswordSecret }}
               passwordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
-              {{- end }}
+                namespace: {{ $dbMasterPasswordSecret.namespace | default $namespace }}
               port: {{ $dbPort }}
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
@@ -205,8 +181,8 @@ spec:
               backupRetentionPeriod: {{ $dbBackupRetention }}
               multiAz: {{ $dbMultiAz }}
               publiclyAccessible: {{ $dbPubliclyAccessible }}
-              iamDatabaseAuthenticationEnabled: true
-
+              iamDatabaseAuthenticationEnabled: false
+              
               skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
               {{- if $tags }}
               tags:
@@ -217,25 +193,7 @@ spec:
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
-          {{- else }}
-          ---
-          apiVersion: rds.aws.m.upbound.io/v1beta1
-          kind: Instance
-          metadata:
-            name: {{ $name }}-rds-instance
-            namespace: {{ $namespace }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: rds-instance
-              crossplane.io/external-name: {{ $dbIdentifier }}
-          spec:
-            deletionPolicy: Orphan
-            managementPolicies: ["Observe"]
-            forProvider:
-              region: {{ $awsRegion }}
-            providerConfigRef:
-              name: {{ $providerConfigName }}
-              kind: {{ $providerConfigKind }}
-          {{- end }}
+          
           {{- else if eq $dbType "aurora-cluster" }}
           ---
           apiVersion: rds.aws.m.upbound.io/v1beta1
@@ -244,38 +202,35 @@ spec:
             name: {{ $name }}-rds-cluster
             namespace: {{ $namespace }}
             annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: rds-cluster
-              crossplane.io/external-name: {{ $dbIdentifier }}
+              gotemplating.fn.crossplane.io/composition-resource-name: database
+              crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
-            {{- if eq $dbMode "existing" }}
-            deletionPolicy: Orphan
-            managementPolicies: ["Observe"]
-            {{- else }}
             deletionPolicy: {{ $deletionPolicy }}
+            {{- if $existingIdentifier }}
+            managementPolicies: ["Observe"]
             {{- end }}
             forProvider:
-              clusterIdentifier: {{ $dbIdentifier }}
+              clusterIdentifier: {{ $targetIdentifier }}
               region: {{ $awsRegion }}
-              {{- if eq $dbMode "create" }}
               engine: aurora-postgresql
+              {{- if $dbEngineVersion }}
               engineVersion: {{ $dbEngineVersion | quote }}
+              {{- end }}
               {{- if $databaseName }}
               databaseName: {{ $databaseName }}
               {{- end }}
               masterUsername: {{ $dbMasterUsername }}
-              {{- if $dbMasterPasswordSecret }}
               masterPasswordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
-              {{- end }}
+                namespace: {{ $dbMasterPasswordSecret.namespace | default $namespace }}
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
               vpcSecurityGroupIds:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
               storageEncrypted: {{ $dbStorageEncrypted }}
-              iamDatabaseAuthenticationEnabled: true
-              iamDatabaseAuthenticationEnabled: true
+              iamDatabaseAuthenticationEnabled: false
               skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
               {{- if $tags }}
               tags:
@@ -283,88 +238,12 @@ spec:
                 {{ $key }}: {{ $value | quote }}
                 {{- end }}
               {{- end }}
-              {{- end }}
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
           {{- end }}
-          
-          ---
-          apiVersion: iam.aws.m.upbound.io/v1beta1
-          kind: Role
-          metadata:
-            name: {{ $name }}-irsa-role
-            namespace: {{ $namespace }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: iam-role
-          spec:
-            forProvider:
-              assumeRolePolicy: {{ printf "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Federated\": \"%s\"}, \"Action\": \"sts:AssumeRoleWithWebIdentity\", \"Condition\": {\"StringEquals\": {\"%s:sub\": \"system:serviceaccount:%s:%s\", \"%s:aud\": \"sts.amazonaws.com\"}}}]}" $eksOidcProviderArn $eksOidcProvider $namespace $serviceAccountName $eksOidcProvider | quote }}
-              {{- if $tags }}
-              tags:
-                {{- range $key, $value := $tags }}
-                {{ $key }}: {{ $value | quote }}
-                {{- end }}
-              {{- end }}
-            providerConfigRef:
-              name: {{ $providerConfigName }}
-              kind: {{ $providerConfigKind }}
-          
-          ---
-          apiVersion: iam.aws.m.upbound.io/v1beta1
-          kind: Policy
-          metadata:
-            name: {{ $name }}-rds-policy
-            namespace: {{ $namespace }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: iam-policy
-          spec:
-            forProvider:
-              policy: |
-                {
-                  "Version": "2012-10-17",
-                  "Statement": [
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        {{- range $i, $action := $rdsActions }}
-                        {{- if $i }},{{ end }}
-                        "{{ $action }}"
-                        {{- end }}
-                      ],
-                      "Resource": [
-                        {{- if $dbResourceId }}
-                        "arn:aws:rds-db:{{ $awsRegion }}:{{ $awsAccountId }}:dbuser:{{ $dbResourceId }}/{{ $iamUsername }}"
-                        {{- else }}
-                        "arn:aws:rds-db:{{ $awsRegion }}:{{ $awsAccountId }}:dbuser:*/*"
-                        {{- end }}
-                      ]
-                    }
-                  ]
-                }
-            providerConfigRef:
-              name: {{ $providerConfigName }}
-              kind: {{ $providerConfigKind }}
-          
-          ---
-          apiVersion: iam.aws.m.upbound.io/v1beta1
-          kind: RolePolicyAttachment
-          metadata:
-            name: {{ $name }}-role-policy-attachment
-            namespace: {{ $namespace }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: iam-role-policy-attachment
-          spec:
-            forProvider:
-              policyArnRef:
-                name: {{ $name }}-rds-policy
-              roleRef:
-                name: {{ $name }}-irsa-role
-            providerConfigRef:
-              name: {{ $providerConfigName }}
-              kind: {{ $providerConfigKind }}
   
-  # Patch status fields and publish connection details
+  # Patch status fields
   - step: patch-and-transform
     functionRef:
       name: function-patch-and-transform
@@ -372,57 +251,45 @@ spec:
       apiVersion: pt.fn.crossplane.io/v1beta1
       kind: Resources
       resources:
-      - name: iam-role
+      - name: database
         patches:
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.arn
-          toFieldPath: status.roleArn
-        readinessChecks:
-        - type: None
-      - name: iam-policy
-        readinessChecks:
-        - type: None
-      - name: iam-role-policy-attachment
-        readinessChecks:
-        - type: None
-      - name: rds-instance
-        patches:
+        # DB Endpoint: Patch from address (Instance) or endpoint (Cluster)
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.address
           toFieldPath: status.dbEndpoint
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.port
-          toFieldPath: status.dbPort
-        - type: ToCompositeFieldPath
-          fromFieldPath: status.atProvider.resourceId
-          toFieldPath: status.dbResourceId
-        - type: ToCompositeFieldPath
-          fromFieldPath: spec.forProvider.username
-          toFieldPath: status.iamUsername
-        readinessChecks:
-        - type: MatchString
-          fieldPath: status.conditions[0].status
-          matchString: "True"
-      - name: rds-cluster
-        patches:
+          policy:
+            fromFieldPath: Optional
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.endpoint
           toFieldPath: status.dbEndpoint
+          policy:
+            fromFieldPath: Optional
+            
+        # DB Port
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.port
           toFieldPath: status.dbPort
+          policy:
+            fromFieldPath: Optional
+            
+        # DB Resource ID: resourceId (Instance) or clusterResourceId (Cluster)
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.resourceId
+          toFieldPath: status.dbResourceId
+          policy:
+            fromFieldPath: Optional
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.clusterResourceId
           toFieldPath: status.dbResourceId
-        - type: ToCompositeFieldPath
-          fromFieldPath: spec.forProvider.masterUsername
-          toFieldPath: status.iamUsername
+          policy:
+            fromFieldPath: Optional
+
         readinessChecks:
         - type: MatchString
           fieldPath: status.conditions[0].status
           matchString: "True"
   
-  # Auto-ready function to mark composition as ready when all resources are ready
+  # Auto-ready function
   - step: auto-ready
     functionRef:
       name: function-auto-ready

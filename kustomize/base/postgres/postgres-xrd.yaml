@@ -21,19 +21,6 @@ spec:
           spec:
             type: object
             properties:
-              # Service Account configuration for IRSA binding
-              serviceAccount:
-                type: object
-                description: "Kubernetes ServiceAccount configuration for IRSA binding"
-                properties:
-                  name:
-                    type: string
-                    description: "Name of the Kubernetes ServiceAccount to bind with IAM role for RDS access"
-                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-                    maxLength: 253
-                required:
-                - name
-              
               # Database configuration
               database:
                 type: object
@@ -44,10 +31,10 @@ spec:
                     type: string
                     description: "Name for the new RDS instance or Aurora cluster to create (e.g., 'myapp-development-db'). Use this when provisioning a new database."
                   
-                  # Identifier for existing database (determines mode)
+                  # Identifier for existing database
                   existingIdentifier:
                     type: string
-                    description: "RDS instance identifier or Aurora cluster identifier of an existing database to observe (e.g., 'myapp-production-db'). If provided, the composition will observe the existing database instead of creating a new one."
+                    description: "RDS instance identifier or Aurora cluster identifier of an existing database to import/manage (e.g., 'myapp-production-db'). NOTE: This will take strict ownership of the resource configurations."
                   
                   # Database type (rds-instance or aurora-cluster)
                   type:
@@ -63,56 +50,51 @@ spec:
                     default: "postgres"
                     description: "Database engine type (currently only postgres is supported)"
                   
-                  # Engine version (for new databases)
+                  # Engine version
                   engineVersion:
                     type: string
-                    description: "PostgreSQL engine version (e.g., '15.5', '16.1'). Required when creating a new database."
+                    description: "PostgreSQL engine version (e.g., '15.5', '16.1')."
                   
-                  # Database name (optional - for connection string)
+                  # Database name
                   databaseName:
                     type: string
-                    description: "Database name for application connections. When creating a new database, this is the initial database name."
+                    description: "Database name for application connections."
                   
-                  # Port (optional - defaults to 5432 for postgres)
+                  # Port
                   port:
                     type: integer
                     default: 5432
                     description: "Database port (defaults to 5432 for PostgreSQL)"
                   
-                  # Database resource ID for IAM policy (for existing databases only)
-                  resourceId:
-                    type: string
-                    description: "RDS resource ID (e.g., 'db-ABCDEFGHIJKLMNOP123456'). Only needed when using existingIdentifier if not auto-detected."
-                  
-                  # Instance class (for new databases)
+                  # Instance class
                   instanceClass:
                     type: string
-                    description: "RDS instance class (e.g., 'db.t3.micro', 'db.t3.small', 'db.r6g.large'). Required when creating a new database."
+                    description: "RDS instance class (e.g., 'db.t3.micro', 'db.t3.small', 'db.r6g.large')."
                   
-                  # Allocated storage in GB (for new databases)
+                  # Allocated storage in GB
                   allocatedStorage:
                     type: integer
-                    description: "Allocated storage in GB (minimum 20 for PostgreSQL). Required when creating a new database."
+                    description: "Allocated storage in GB (minimum 20 for PostgreSQL)."
                     minimum: 20
                   
-                  # Storage type (for new databases)
+                  # Storage type
                   storageType:
                     type: string
                     enum: ["gp2", "gp3", "io1"]
                     default: "gp3"
                     description: "Storage type: gp2 (general purpose SSD), gp3 (newer general purpose SSD), io1 (provisioned IOPS)"
                   
-                  # Master username (for new databases)
+                  # Master username
                   masterUsername:
                     type: string
-                    description: "Master username for the database. Required when creating a new database. Note: This is different from iamUsername."
+                    description: "Master username for the database."
                     pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
                     maxLength: 63
                   
-                  # Master password secret reference (for new databases)
+                  # Master password secret reference
                   masterPasswordSecretRef:
                     type: object
-                    description: "Reference to a Kubernetes secret containing the master password. Required when creating a new database."
+                    description: "Reference to a Kubernetes secret containing the master password."
                     properties:
                       name:
                         type: string
@@ -127,7 +109,7 @@ spec:
                     required:
                     - name
                   
-                  # Backup configuration (for new databases)
+                  # Backup configuration
                   backupRetentionPeriod:
                     type: integer
                     default: 7
@@ -135,56 +117,32 @@ spec:
                     minimum: 0
                     maximum: 35
                   
-                  # Multi-AZ deployment (for new databases)
+                  # Multi-AZ deployment
                   multiAz:
                     type: boolean
                     default: false
                     description: "Enable Multi-AZ deployment for high availability"
                   
-                  # Public accessibility (for new databases)
+                  # Public accessibility
                   publiclyAccessible:
                     type: boolean
                     default: false
                     description: "Make the database publicly accessible (not recommended for production)"
                   
-                  # Encryption at rest (for new databases)
+                  # Encryption at rest
                   storageEncrypted:
                     type: boolean
                     default: true
                     description: "Enable storage encryption at rest"
-                  
-                  # Database username for IAM authentication
-                  iamUsername:
-                    type: string
-                    description: "PostgreSQL username for IAM authentication (must be created in the database with IAM auth enabled)"
-                    pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
-                    maxLength: 63
                 
                 required:
-                - iamUsername
-              
-              # IAM permissions configuration
-              permissions:
-                type: object
-                description: "IAM permissions configuration"
-                properties:
-                  # Allow connect via IAM auth
-                  allowConnect:
-                    type: boolean
-                    description: "Allow RDS IAM database authentication (rds-db:connect action)"
-                    default: true
-                  
-                  # Additional RDS IAM actions
-                  additionalActions:
-                    type: array
-                    description: "Additional RDS/IAM actions to include in the policy"
-                    items:
-                      type: string
+                - masterUsername
+                - masterPasswordSecretRef
               
               # Optional: Tags for created resources
               tags:
                 type: object
-                description: "Tags to apply to created AWS resources (IAM role and policy)"
+                description: "Tags to apply to AWS resources"
                 x-kubernetes-preserve-unknown-fields: true
               
               # Optional: Provider configuration override
@@ -215,8 +173,6 @@ spec:
                 description: "Controls whether the physical AWS resource is deleted when the Crossplane resource is deleted. Default: Delete."
 
               # Optional: Connection secret reference
-              
-              # Optional: Connection secret reference
               writeConnectionSecretToRef:
                 type: object
                 description: "Optional: Write connection details (endpoint, port, database, username) to a Kubernetes secret in the same namespace"
@@ -228,7 +184,6 @@ spec:
                 - name
             
             required:
-            - serviceAccount
             - database
           
           status:
@@ -239,7 +194,7 @@ spec:
                 description: "RDS instance or Aurora cluster identifier"
               dbResourceId:
                 type: string
-                description: "RDS resource ID used in IAM policy"
+                description: "RDS resource ID"
               dbEndpoint:
                 type: string
                 description: "Database endpoint hostname"
@@ -249,18 +204,6 @@ spec:
               databaseName:
                 type: string
                 description: "Database name"
-              roleArn:
-                type: string
-                description: "ARN of the IAM role created for IRSA"
-              accountId:
-                type: string
-                description: "AWS Account ID"
-              iamUsername:
-                type: string
-                description: "IAM database username"
-              connectionString:
-                type: string
-                description: "PostgreSQL connection string (without password - use IAM auth token)"
               conditions:
                 type: array
                 items:
