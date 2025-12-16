@@ -321,14 +321,9 @@ metadata:
   name: myapp-dev-db
   namespace: myapp
 spec:
-  serviceAccount:
-    name: myapp-sa
-  
   database:
     identifier: myapp-development-db
-    type: rds-instance
-    engine: postgres
-    engineVersion: "15.5"
+    engineVersion: "18.1"
     databaseName: myapp_dev
     
     # Instance configuration
@@ -418,7 +413,7 @@ spec:
     identifier: myapp-aurora-prod
     type: aurora-cluster
     engine: postgres
-    engineVersion: "15.5"
+    engineVersion: "18.1"
     databaseName: myapp_data
 
     

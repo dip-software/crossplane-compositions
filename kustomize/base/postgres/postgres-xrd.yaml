@@ -67,7 +67,7 @@ spec:
                   # Engine version
                   engineVersion:
                     type: string
-                    description: "PostgreSQL engine version (e.g., '15.5', '16.1')."
+                    description: "PostgreSQL engine version (e.g., '18.1', '16.1')."
                   
                   # Database name
                   databaseName:

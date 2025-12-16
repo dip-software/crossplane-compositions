@@ -12,7 +12,6 @@ spec:
     provider: aws
     type: rds-instance
     engine: postgres
-    engineVersion: "15.5"
     databaseName: myapp_dev
     port: 5432
     
