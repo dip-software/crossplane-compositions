@@ -66,6 +66,12 @@ spec:
           {{- /* T-Shirt Sizing Map */ -}}
           {{- $size := $xr.spec.database.size | default "small" }}
           
+          {{- /* Restore Configuration */ -}}
+          {{- $restoreIdentifier := "" }}
+          {{- if $xr.spec.database.restore }}
+            {{- $restoreIdentifier = $xr.spec.database.restore.sourceIdentifier }}
+          {{- end }}
+          
           {{- /* Determine identifier: Use existingIdentifier if set (Import/Active Manage), else identifier (Create) */ -}}
           {{- $existingIdentifier := $xr.spec.database.existingIdentifier | default "" }}
           {{- $dbIdentifier := $xr.spec.database.identifier | default "" }}
@@ -178,14 +184,16 @@ spec:
             forProvider:
               identifier: {{ $targetIdentifier }}
               region: {{ $awsRegion }}
+              
+              {{- if $restoreIdentifier }}
+              # Restore from snapshot configuration
+              snapshotIdentifier: {{ $restoreIdentifier }}
+              {{- else }}
+              # New DB configuration (only set when NOT restoring)
               engine: {{ $dbEngine }}
               {{- if $dbEngineVersion }}
               engineVersion: {{ $dbEngineVersion | quote }}
               {{- end }}
-              instanceClass: {{ $awsInstanceClass }}
-              allocatedStorage: {{ $dbAllocatedStorage }}
-              storageType: {{ $dbStorageType }}
-              storageEncrypted: true
               {{- if $databaseName }}
               dbName: {{ $databaseName }}
               {{- end }}
@@ -193,6 +201,12 @@ spec:
               passwordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
+              {{- end }}
+
+              instanceClass: {{ $awsInstanceClass }}
+              allocatedStorage: {{ $dbAllocatedStorage }}
+              storageType: {{ $dbStorageType }}
+              storageEncrypted: true
 
               port: {{ $dbPort }}
               dbSubnetGroupNameRef:
@@ -233,6 +247,12 @@ spec:
             forProvider:
               clusterIdentifier: {{ $targetIdentifier }}
               region: {{ $awsRegion }}
+              
+              {{- if $restoreIdentifier }}
+              # Restore from snapshot configuration
+              snapshotIdentifier: {{ $restoreIdentifier }}
+              {{- else }}
+              # New Cluster configuration
               engine: aurora-postgresql
               {{- if $dbEngineVersion }}
               engineVersion: {{ $dbEngineVersion | quote }}
@@ -244,6 +264,7 @@ spec:
               masterPasswordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
+              {{- end }}
 
               dbSubnetGroupNameRef:
                 name: {{ $name }}-subnet-group
@@ -310,9 +331,15 @@ spec:
             
             # Bootstrap configuration
             bootstrap:
+              {{- if $restoreIdentifier }}
+              recovery:
+                backup:
+                  name: {{ $restoreIdentifier }}
+              {{- else }}
               initdb:
                 database: {{ $databaseName | default "app" }}
                 owner: {{ $dbMasterUsername | default "app" }}
+              {{- end }}
             
             # Storage configuration
             storage:
