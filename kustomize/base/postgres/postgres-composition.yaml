@@ -87,8 +87,7 @@ spec:
           {{- $dbMasterPasswordSecret := $xr.spec.database.masterPasswordSecretRef }}
           {{- $dbBackupRetention := $xr.spec.database.backupRetentionPeriod | default 7 }}
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
-          {{- $dbPubliclyAccessible := $xr.spec.database.publiclyAccessible | default false }}
-          {{- $dbPubliclyAccessible := $xr.spec.database.publiclyAccessible | default false }}
+
           {{- $dbSkipFinalSnapshot := $xr.spec.database.skipFinalSnapshot | default true }}
           {{- $deletionPolicy := $xr.spec.deletionPolicy | default "Delete" }}
           
@@ -202,7 +201,7 @@ spec:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
               multiAz: {{ $dbMultiAz }}
-              publiclyAccessible: {{ $dbPubliclyAccessible }}
+              publiclyAccessible: false
               iamDatabaseAuthenticationEnabled: false
               
               skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
@@ -307,7 +306,7 @@ spec:
               crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
             instances: {{ $cnpgInstances }}
-            imageName: ghcr.io/cloudnative-pg/postgresql:{{ $dbEngineVersion | default "15.5" }}
+            imageName: ghcr.io/cloudnative-pg/postgresql:{{ $dbEngineVersion | default "18.1" }}
             
             # Bootstrap configuration
             bootstrap:

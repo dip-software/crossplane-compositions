@@ -29,7 +29,6 @@ spec:
     # Backup and HA
     backupRetentionPeriod: 7
     multiAz: false
-    publiclyAccessible: false
   
   # IAM permissions
   permissions:

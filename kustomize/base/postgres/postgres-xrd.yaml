@@ -134,11 +134,7 @@ spec:
                     default: false
                     description: "Enable High Availability (Multi-AZ for AWS, Replicas for CNPG)"
                   
-                  # Public accessibility
-                  publiclyAccessible:
-                    type: boolean
-                    default: false
-                    description: "Make the database publicly accessible (not recommended for production)"
+
                   
 
                 
