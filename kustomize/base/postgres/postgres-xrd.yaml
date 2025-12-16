@@ -67,7 +67,8 @@ spec:
                   # Engine version
                   engineVersion:
                     type: string
-                    description: "PostgreSQL engine version (e.g., '18.1', '16.1')."
+                    description: "PostgreSQL engine version (e.g., '18.1', '17.6'). Must be version 17 or higher."
+                    pattern: '^(1[7-9]|[2-9][0-9])\.[0-9]+$'
                   
                   # Database name
                   databaseName:
