@@ -4,9 +4,7 @@ metadata:
   name: myapp-production-db
   namespace: myapp
 spec:
-  # ServiceAccount configuration for IRSA binding
-  serviceAccount:
-    name: myapp-prod-sa
+
   
   # Database configuration - create new production RDS instance
   database:
@@ -16,13 +14,12 @@ spec:
     engineVersion: "16.1"
     databaseName: myapp_production
     port: 5432
-    iamUsername: myapp_prod_user
     
     # Production instance configuration
-    instanceClass: db.r6g.large
+    provider: aws
+    size: large
     allocatedStorage: 100
     storageType: gp3
-    storageEncrypted: true
     
     # Master credentials from secret
     masterUsername: postgres

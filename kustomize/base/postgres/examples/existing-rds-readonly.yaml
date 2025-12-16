@@ -4,9 +4,7 @@ metadata:
   name: analytics-readonly-db
   namespace: analytics
 spec:
-  # ServiceAccount configuration for IRSA binding
-  serviceAccount:
-    name: analytics-reader-sa
+
   
   # Database configuration - read-only access to production database
   database:
@@ -15,7 +13,6 @@ spec:
     engine: postgres
     databaseName: production
     port: 5432
-    iamUsername: readonly_user
   
   # IAM permissions - read-only access
   permissions:

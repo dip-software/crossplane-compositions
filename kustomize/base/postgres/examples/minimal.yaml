@@ -12,5 +12,6 @@ spec:
     masterPasswordSecretRef:
       name: myapp-db-password
       
-    instanceClass: db.t3.micro
+    provider: aws
+    size: small
     allocatedStorage: 20

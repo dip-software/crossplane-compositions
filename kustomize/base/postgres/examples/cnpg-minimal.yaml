@@ -1,0 +1,26 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-local-db
+  namespace: default
+spec:
+  database:
+    # Switch to CloudNativePG with one line
+    provider: cnpg
+    
+    # Generic sizing
+    size: small
+    
+    # Standard configuration
+    identifier: myapp-local
+    databaseName: app
+    masterUsername: appuser
+    masterPasswordSecretRef:
+      name: myapp-db-secret
+      key: password
+    
+    # Storage (valid for both)
+    allocatedStorage: 5
+    
+    # HA
+    multiAz: false

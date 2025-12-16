@@ -4,18 +4,16 @@ metadata:
   name: myapp-db-access
   namespace: myapp
 spec:
-  # ServiceAccount configuration for IRSA binding
-  serviceAccount:
-    name: myapp-sa
+
   
   # Database configuration - using existing RDS instance
   database:
     existingIdentifier: myapp-production-db
+    provider: aws
     type: rds-instance
     engine: postgres
     databaseName: application
     port: 5432
-    iamUsername: myapp_user
   
   # IAM permissions
   permissions:

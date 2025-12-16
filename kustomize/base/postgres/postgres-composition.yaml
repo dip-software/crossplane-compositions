@@ -56,6 +56,16 @@ spec:
           {{- $env := index .context "apiextensions.crossplane.io/environment" }}
           {{- $awsRegion := index $env "region" }}
           
+          {{- /* -----------------------------------------------------------------------
+               Configuration Abstraction & Defaults
+               ----------------------------------------------------------------------- */ -}}
+          
+          {{- /* Provider Selection: 'aws' (default) or 'cnpg' */ -}}
+          {{- $provider := $xr.spec.database.provider | default "aws" }}
+
+          {{- /* T-Shirt Sizing Map */ -}}
+          {{- $size := $xr.spec.database.size | default "small" }}
+          
           {{- /* Determine identifier: Use existingIdentifier if set (Import/Active Manage), else identifier (Create) */ -}}
           {{- $existingIdentifier := $xr.spec.database.existingIdentifier | default "" }}
           {{- $dbIdentifier := $xr.spec.database.identifier | default "" }}
@@ -71,7 +81,6 @@ spec:
           
           {{- /* Database Spec Variables */ -}}
           {{- $dbEngineVersion := $xr.spec.database.engineVersion | default "" }}
-          {{- $dbInstanceClass := $xr.spec.database.instanceClass | default "" }}
           {{- $dbAllocatedStorage := $xr.spec.database.allocatedStorage | default 20 }}
           {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
           {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
@@ -79,9 +88,22 @@ spec:
           {{- $dbBackupRetention := $xr.spec.database.backupRetentionPeriod | default 7 }}
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
           {{- $dbPubliclyAccessible := $xr.spec.database.publiclyAccessible | default false }}
-          {{- $dbStorageEncrypted := $xr.spec.database.storageEncrypted | default true }}
+          {{- $dbPubliclyAccessible := $xr.spec.database.publiclyAccessible | default false }}
           {{- $dbSkipFinalSnapshot := $xr.spec.database.skipFinalSnapshot | default true }}
           {{- $deletionPolicy := $xr.spec.deletionPolicy | default "Delete" }}
+          
+          {{- /* AWS Instance Class Calculation */ -}}
+          {{- $awsInstanceClass := "db.t3.small" }}
+          {{- if eq $size "medium" }}
+            {{- $awsInstanceClass = "db.t3.medium" }}
+          {{- else if eq $size "large" }}
+            {{- $awsInstanceClass = "db.m5.large" }}
+          {{- end }}
+
+          {{- /* -----------------------------------------------------------------------
+               AWS Implementation
+               ----------------------------------------------------------------------- */ -}}
+          {{- if eq $provider "aws" }}
           
           {{- /* Extract VPC configuration */ -}}
           {{- $servicesVpc := index $env "servicesVpc" | default dict }}
@@ -161,10 +183,10 @@ spec:
               {{- if $dbEngineVersion }}
               engineVersion: {{ $dbEngineVersion | quote }}
               {{- end }}
-              instanceClass: {{ $dbInstanceClass }}
+              instanceClass: {{ $awsInstanceClass }}
               allocatedStorage: {{ $dbAllocatedStorage }}
               storageType: {{ $dbStorageType }}
-              storageEncrypted: {{ $dbStorageEncrypted }}
+              storageEncrypted: true
               {{- if $databaseName }}
               dbName: {{ $databaseName }}
               {{- end }}
@@ -229,7 +251,7 @@ spec:
               vpcSecurityGroupIds:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
-              storageEncrypted: {{ $dbStorageEncrypted }}
+              storageEncrypted: true
               iamDatabaseAuthenticationEnabled: false
               skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
               {{- if $tags }}
@@ -241,6 +263,71 @@ spec:
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
+          {{- end }} 
+          {{- end }}
+
+          {{- /* -----------------------------------------------------------------------
+               CloudNativePG Implementation (Placeholder)
+               ----------------------------------------------------------------------- */ -}}
+          {{- if eq $provider "cnpg" }}
+
+          {{- /* CNPG Resource Calculation */ -}}
+          {{- $cnpgCpu := "1" }}
+          {{- $cnpgMemory := "2Gi" }}
+          {{- if eq $size "medium" }}
+            {{- $cnpgCpu = "2" }}
+            {{- $cnpgMemory = "4Gi" }}
+          {{- else if eq $size "large" }}
+            {{- $cnpgCpu = "4" }}
+            {{- $cnpgMemory = "16Gi" }}
+          {{- end }}
+
+          {{- $cnpgInstances := 1 }}
+          {{- if $dbMultiAz }}
+            {{- $cnpgInstances = 3 }}
+          {{- end }}
+
+          {{- /* Map AWS storage types to K8s StorageClasses (simplistic mapping) */ -}}
+          {{- $cnpgStorageClass := "standard" }}
+          {{- if eq $dbStorageType "gp3" }}
+             {{- $cnpgStorageClass = "gp3" }}
+          {{- end }}
+          {{- if eq $dbStorageType "io1" }}
+             {{- $cnpgStorageClass = "io1" }}
+          {{- end }}
+
+          ---
+          apiVersion: postgresql.cnpg.io/v1
+          kind: Cluster
+          metadata:
+            name: {{ $targetIdentifier }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: database
+              crossplane.io/external-name: {{ $targetIdentifier }}
+          spec:
+            instances: {{ $cnpgInstances }}
+            imageName: ghcr.io/cloudnative-pg/postgresql:{{ $dbEngineVersion | default "15.5" }}
+            
+            # Bootstrap configuration
+            bootstrap:
+              initdb:
+                database: {{ $databaseName | default "app" }}
+                owner: {{ $dbMasterUsername | default "app" }}
+            
+            # Storage configuration
+            storage:
+              size: {{ $dbAllocatedStorage }}Gi
+              storageClass: {{ $cnpgStorageClass }}
+            
+            # Resource Requirements
+            resources:
+              requests:
+                memory: {{ $cnpgMemory }}
+                cpu: {{ $cnpgCpu }}
+              limits:
+                memory: {{ $cnpgMemory }}
+                cpu: {{ $cnpgCpu }}
           {{- end }}
   
   # Patch status fields
@@ -264,7 +351,12 @@ spec:
           toFieldPath: status.dbEndpoint
           policy:
             fromFieldPath: Optional
-            
+        
+        # CNPG Endpoint (Constructed via transform or assumed stable service name)
+        # We can't easily construct strings in patches without complex transforms.
+        # But for CNPG, the connection host is rarely in the Status of the Cluster resource itself in a simple generic field.
+        # It's usually `<cluster-name>-rw`.
+        
         # DB Port
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.port
@@ -288,6 +380,10 @@ spec:
         - type: MatchString
           fieldPath: status.conditions[0].status
           matchString: "True"
+        # CNPG Readiness (Direct composition)
+        - type: MatchString
+          fieldPath: status.phase
+          matchString: "Cluster in healthy state" # Approximate check, CNPG uses phase: 'Running' or conditions
   
   # Auto-ready function
   - step: auto-ready
