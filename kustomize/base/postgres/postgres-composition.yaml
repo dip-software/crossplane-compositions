@@ -292,17 +292,23 @@ spec:
           {{- if eq $provider "cnpg" }}
 
           {{- /* CNPG Resource Calculation */ -}}
-          {{- $cnpgCpu := "1" }}
-          {{- $cnpgMemory := "2Gi" }}
+          {{- $cnpgCpuReq := "500m" }}
+          {{- $cnpgCpuLim := "1000m" }}
+          {{- $cnpgMemReq := "512Mi" }}
+          {{- $cnpgMemLim := "1Gi" }}
           {{- if eq $size "medium" }}
-            {{- $cnpgCpu = "2" }}
-            {{- $cnpgMemory = "4Gi" }}
+            {{- $cnpgCpuReq = "2" }}
+            {{- $cnpgCpuLim = "2" }}
+            {{- $cnpgMemReq = "4Gi" }}
+            {{- $cnpgMemLim = "4Gi" }}
           {{- else if eq $size "large" }}
-            {{- $cnpgCpu = "4" }}
-            {{- $cnpgMemory = "16Gi" }}
+            {{- $cnpgCpuReq = "4" }}
+            {{- $cnpgCpuLim = "4" }}
+            {{- $cnpgMemReq = "16Gi" }}
+            {{- $cnpgMemLim = "16Gi" }}
           {{- end }}
 
-          {{- $cnpgInstances := 1 }}
+          {{- $cnpgInstances := 2 }}
           {{- if $dbMultiAz }}
             {{- $cnpgInstances = 3 }}
           {{- end }}
@@ -310,11 +316,14 @@ spec:
           {{- /* Map AWS storage types to K8s StorageClasses (simplistic mapping) */ -}}
           {{- $cnpgStorageClass := "standard" }}
           {{- if eq $dbStorageType "gp3" }}
-             {{- $cnpgStorageClass = "gp3" }}
+             {{- $cnpgStorageClass = "gp3-encrypted" }}
           {{- end }}
           {{- if eq $dbStorageType "io1" }}
              {{- $cnpgStorageClass = "io1" }}
           {{- end }}
+
+
+
 
           ---
           apiVersion: postgresql.cnpg.io/v1
@@ -327,7 +336,7 @@ spec:
               crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
             instances: {{ $cnpgInstances }}
-            imageName: ghcr.io/cloudnative-pg/postgresql:{{ $dbEngineVersion | default "18.1" }}
+
             
             # Bootstrap configuration
             bootstrap:
@@ -339,6 +348,8 @@ spec:
               initdb:
                 database: {{ $databaseName | default "app" }}
                 owner: {{ $dbMasterUsername | default "app" }}
+                secret:
+                  name: myapp-db-password
               {{- end }}
             
             # Storage configuration
@@ -349,11 +360,11 @@ spec:
             # Resource Requirements
             resources:
               requests:
-                memory: {{ $cnpgMemory }}
-                cpu: {{ $cnpgCpu }}
+                memory: {{ $cnpgMemReq }}
+                cpu: {{ $cnpgCpuReq }}
               limits:
-                memory: {{ $cnpgMemory }}
-                cpu: {{ $cnpgCpu }}
+                memory: {{ $cnpgMemLim }}
+                cpu: {{ $cnpgCpuLim }}
           {{- end }}
   
   # Patch status fields
