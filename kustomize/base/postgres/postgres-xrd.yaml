@@ -138,20 +138,20 @@ spec:
                   
 
                 
+                  # Restore configuration
+                  restore:
+                    type: object
+                    description: "Configuration for bootstrapping the database from a snapshot (AWS) or backup (CNPG)."
+                    properties:
+                      sourceIdentifier:
+                        type: string
+                        description: "The identifier of the source to restore from. AWS: DB Snapshot Identifier. CNPG: Backup Object Name."
+                    required:
+                    - sourceIdentifier
+                
                 required:
                 - masterUsername
                 - masterPasswordSecretRef
-
-                # Restore configuration (Optional)
-                restore:
-                  type: object
-                  description: "Configuration for bootstrapping the database from a snapshot (AWS) or backup (CNPG)."
-                  properties:
-                    sourceIdentifier:
-                      type: string
-                      description: "The identifier of the source to restore from. AWS: DB Snapshot Identifier. CNPG: Backup Object Name."
-                  required:
-                  - sourceIdentifier
               
               # Optional: Tags for created resources
               tags:

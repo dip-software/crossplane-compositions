@@ -11,6 +11,9 @@ spec:
     masterUsername: postgres
     masterPasswordSecretRef:
       name: myapp-db-password
+
+    restore:
+      sourceIdentifier: "minimal-snapshot"
       
     provider: aws
     size: small
