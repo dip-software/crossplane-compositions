@@ -30,7 +30,6 @@ spec:
     # Production backup and HA settings
     backupRetentionPeriod: 30
     multiAz: true
-    publiclyAccessible: false
   
   # IAM permissions
   permissions:

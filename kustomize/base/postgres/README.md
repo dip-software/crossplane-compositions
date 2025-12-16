@@ -1,21 +1,20 @@
 # Postgres Crossplane Composition
 
-This Crossplane v2 composition provides a complete solution for **AWS RDS PostgreSQL with IAM Roles for Service Accounts (IRSA)** in Kubernetes. It supports both **creating new RDS instances** and **using existing databases**, with automatic IRSA setup for password-less IAM authentication.
+This Crossplane v2 composition provides a complete solution for **PostgreSQL** databases, supporting both **AWS RDS** (with IAM Roles for Service Accounts) and **CloudNativePG** on Kubernetes. It abstracts the underlying provider details, allowing for seamless switching between cloud-managed and Kubernetes-native databases.
 
 ## Features
 
 - ✅ **Namespace-scoped** composite resources (no claims required)
-- ✅ **Create new RDS PostgreSQL instances** with full configuration
-- ✅ **Create new Aurora PostgreSQL clusters** with IAM auth enabled
+- ✅ **Multi-Provider Support**: Switch between `aws` and `cnpg` backends
+- ✅ **T-Shirt Sizing**: Simple `small`, `medium`, `large` abstraction
+- ✅ **Create new AWS RDS/Aurora** instances with full configuration
+- ✅ **Deploy CloudNativePG Clusters** on Kubernetes
 - ✅ **Use existing RDS instances** or **Aurora clusters** (observe-only mode)
-- ✅ **IRSA setup** with automatic IAM role and policy creation
-- ✅ **IAM database authentication** for password-less connections
-- ✅ **Kubernetes ServiceAccount** integration with IAM role annotations
-- ✅ **VPC and security group** configuration for new databases
-- ✅ **Multi-AZ deployment** support for high availability
+- ✅ **IRSA setup** with automatic IAM role and policy creation (AWS)
+- ✅ **IAM database authentication** for password-less connections (AWS)
+- ✅ **Multi-AZ deployment** support (AWS Multi-AZ / CNPG Replicas)
 - ✅ **Automatic backups** with configurable retention
-- ✅ **Encryption at rest** enabled by default
-- ✅ **Configurable instance classes** and storage
+- ✅ **Encryption at rest** enforced by default
 - ✅ **Connection secret output** with endpoint, port, and username
 - ✅ **Resource tagging** support
 
@@ -331,13 +330,12 @@ spec:
     engine: postgres
     engineVersion: "15.5"
     databaseName: myapp_dev
-
     
     # Instance configuration
-    instanceClass: db.t3.micro
+    provider: aws
+    size: small
     allocatedStorage: 20
     storageType: gp3
-    storageEncrypted: true
     
     # Master credentials
     masterUsername: postgres
@@ -348,7 +346,7 @@ spec:
     # Backup and HA
     backupRetentionPeriod: 7
     multiAz: false
-    publiclyAccessible: false
+
   
   permissions:
     allowConnect: true
@@ -376,13 +374,12 @@ spec:
     engine: postgres
     engineVersion: "16.1"
     databaseName: myapp_production
-
     
     # Production instance
-    instanceClass: db.r6g.large
+    provider: aws
+    size: large
     allocatedStorage: 100
     storageType: gp3
-    storageEncrypted: true
     
     # Master credentials
     masterUsername: postgres
@@ -392,7 +389,7 @@ spec:
     # Production settings
     backupRetentionPeriod: 30
     multiAz: true
-    publiclyAccessible: false
+
   
   writeConnectionSecretToRef:
     name: myapp-prod-db-connection
@@ -432,7 +429,6 @@ spec:
     
     # Backup settings
     backupRetentionPeriod: 14
-    storageEncrypted: true
   
   writeConnectionSecretToRef:
     name: myapp-aurora-connection
@@ -447,16 +443,16 @@ spec:
 |-----------|----------|---------|-------------|
 | `identifier` | No** | - | Name for new database (use this to create) |
 | `existingIdentifier` | No** | - | Existing database name (use this to observe) |
-| `engineVersion` | Yes* | - | PostgreSQL version (e.g., "15.5", "16.1") |
-| `instanceClass` | Yes* | - | Instance type (e.g., db.t3.micro, db.r6g.large) |
+| `provider` | No | `aws` | Backend provider: `aws` or `cnpg` |
+| `size` | No | `small` | T-shirt size: `small`, `medium`, `large` |
+| `engineVersion` | Yes* | - | PostgreSQL engine version (e.g., '18.1', '16.1') |
 | `allocatedStorage` | Yes* | - | Storage in GB (minimum 20) |
 | `storageType` | No | `gp3` | Storage type: gp2, gp3, io1 |
 | `masterUsername` | Yes* | - | Master database username |
 | `masterPasswordSecretRef` | Yes* | - | Reference to password secret |
 | `backupRetentionPeriod` | No | `7` | Backup retention days (0-35) |
 | `multiAz` | No | `false` | Enable Multi-AZ deployment |
-| `publiclyAccessible` | No | `false` | Make database publicly accessible |
-| `storageEncrypted` | No | `true` | Enable encryption at rest |
+
 
 *Required only when creating a new database (using `identifier`)  
 **Either `identifier` or `existingIdentifier` must be provided (not both)
@@ -742,7 +738,6 @@ Source: <EKS-Node-Security-Group-ID>
 
 - Does not automatically create PostgreSQL IAM users (must be done manually after DB creation)
 - Aurora cluster instance provisioning not included (cluster only, add instances separately)
-- CloudNativePG support not yet implemented
 - No automated schema migration or user provisioning
 
 ## Future Roadmap

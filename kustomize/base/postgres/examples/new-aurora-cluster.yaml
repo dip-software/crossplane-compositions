@@ -24,7 +24,6 @@ spec:
     # Backup settings
     # Backup settings
     backupRetentionPeriod: 14
-    publiclyAccessible: false
   
   # IAM permissions
   permissions:
