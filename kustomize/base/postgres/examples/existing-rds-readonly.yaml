@@ -4,7 +4,6 @@ metadata:
   name: analytics-readonly-db
   namespace: analytics
 spec:
-
   
   # Database configuration - read-only access to production database
   database:

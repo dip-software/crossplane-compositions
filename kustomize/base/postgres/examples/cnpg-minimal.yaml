@@ -4,10 +4,10 @@ metadata:
   name: myapp-local-db
   namespace: default
 spec:
+  compositionSelector:
+    matchLabels:
+      provider: cnpg
   database:
-    # Switch to CloudNativePG with one line
-    provider: cnpg
-    
     # Generic sizing
     size: small
     
@@ -19,7 +19,6 @@ spec:
       name: myapp-db-secret
       key: password
     
-    # Storage (valid for both)
     allocatedStorage: 5
     
     # HA

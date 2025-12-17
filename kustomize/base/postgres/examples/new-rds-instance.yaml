@@ -4,12 +4,10 @@ metadata:
   name: myapp-new-db
   namespace: myapp
 spec:
-
   
   # Database configuration - create new RDS instance
   database:
     identifier: myapp-development-db
-    provider: aws
     type: rds-instance
     engine: postgres
     databaseName: myapp_dev

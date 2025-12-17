@@ -4,12 +4,10 @@ metadata:
   name: myapp-db-access
   namespace: myapp
 spec:
-
   
   # Database configuration - using existing RDS instance
   database:
     existingIdentifier: myapp-production-db
-    provider: aws
     type: rds-instance
     engine: postgres
     databaseName: application

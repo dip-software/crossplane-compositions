@@ -4,7 +4,6 @@ metadata:
   name: myapp-aurora-access
   namespace: myapp
 spec:
-
   
   # Database configuration - using existing Aurora PostgreSQL cluster
   database:

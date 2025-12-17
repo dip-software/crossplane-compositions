@@ -4,6 +4,9 @@ metadata:
   name: myapp-minimal-db
   namespace: default
 spec:
+  compositionSelector:
+    matchLabels:
+      provider: cnpg
   database:
     identifier: myapp-minimal-db
     engineVersion: "18.1"
@@ -11,10 +14,9 @@ spec:
     masterUsername: postgres
     masterPasswordSecretRef:
       name: myapp-db-password
-
-    restore:
-      sourceIdentifier: "minimal-snapshot"
-      
-    provider: aws
+    
     size: small
     allocatedStorage: 20
+
+  writeConnectionSecretToRef:
+    name: myapp-minimal-db-connection
