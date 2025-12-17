@@ -4,7 +4,6 @@ metadata:
   name: myapp-production-db
   namespace: myapp
 spec:
-
   
   # Database configuration - create new production RDS instance
   database:
@@ -16,7 +15,6 @@ spec:
     port: 5432
     
     # Production instance configuration
-    provider: aws
     size: large
     allocatedStorage: 100
     storageType: gp3

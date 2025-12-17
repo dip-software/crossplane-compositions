@@ -22,7 +22,7 @@ validate: ## Validate the composition and XRD using crossplane beta validate
 	@echo "🔍 Validating Postgres XRD and Composition..."
 	@crossplane beta validate \
 		$(BASE_DIR)postgres-xrd.yaml,$(BASE_DIR)functions-only.yaml \
-		$(BASE_DIR)postgres-composition.yaml
+		$(BASE_DIR)postgres-composition-aws.yaml,$(BASE_DIR)postgres-composition-cnpg.yaml
 	@echo "✅ Validation passed!"
 
 render: ## Render compositions with example Postgres resources
@@ -30,14 +30,19 @@ render: ## Render compositions with example Postgres resources
 	@for example in $(EXAMPLES); do \
 		echo ""; \
 		echo "Testing $$(basename $$example)..."; \
+		if grep -q "provider: cnpg" $$example; then \
+			COMP=$(BASE_DIR)postgres-composition-cnpg.yaml; \
+		else \
+			COMP=$(BASE_DIR)postgres-composition-aws.yaml; \
+		fi; \
 		crossplane render \
 			$$example \
-			$(BASE_DIR)postgres-composition.yaml \
+			$$COMP \
 			$(BASE_DIR)functions-only.yaml \
 			--xrd=$(BASE_DIR)postgres-xrd.yaml \
 			--required-resources=$(BASE_DIR)test-environment-config.yaml \
 			|| exit 1; \
-		echo "✅ $$(basename $$example) rendered successfully"; \
+		echo "✅ $$(basename $$example) rendered successfully with $$(basename $$COMP)"; \
 	done
 	@echo ""
 	@echo "✅ All examples rendered successfully!"

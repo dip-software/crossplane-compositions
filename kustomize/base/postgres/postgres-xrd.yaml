@@ -9,6 +9,10 @@ spec:
     plural: postgres
   # Namespace scope - compositions will be namespace-scoped
   scope: Namespaced
+
+  # Default to AWS composition if no selector is provided
+  defaultCompositionRef:
+    name: postgres-aws
   
   versions:
   - name: v1alpha1
@@ -26,12 +30,7 @@ spec:
                 type: object
                 description: "RDS PostgreSQL database configuration"
                 properties:
-                  # Cloud Provider Selection
-                  provider:
-                    type: string
-                    enum: ["aws", "cnpg"]
-                    default: "aws"
-                    description: "Cloud provider backend: 'aws' for RDS, 'cnpg' for CloudNativePG on Kubernetes."
+
 
                   # T-Shirt Sizing abstraction
                   size:

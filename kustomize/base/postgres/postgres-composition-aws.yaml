@@ -3,6 +3,8 @@ kind: Composition
 metadata:
   name: postgres-aws
   namespace: crossplane-system
+  labels:
+    provider: aws
 spec:
   # Reference to the XRD
   compositeTypeRef:
@@ -60,9 +62,6 @@ spec:
                Configuration Abstraction & Defaults
                ----------------------------------------------------------------------- */ -}}
           
-          {{- /* Provider Selection: 'aws' (default) or 'cnpg' */ -}}
-          {{- $provider := $xr.spec.database.provider | default "aws" }}
-
           {{- /* T-Shirt Sizing Map */ -}}
           {{- $size := $xr.spec.database.size | default "small" }}
           
@@ -108,7 +107,6 @@ spec:
           {{- /* -----------------------------------------------------------------------
                AWS Implementation
                ----------------------------------------------------------------------- */ -}}
-          {{- if eq $provider "aws" }}
           
           {{- /* Extract VPC configuration */ -}}
           {{- $servicesVpc := index $env "servicesVpc" | default dict }}
@@ -284,88 +282,6 @@ spec:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
           {{- end }} 
-          {{- end }}
-
-          {{- /* -----------------------------------------------------------------------
-               CloudNativePG Implementation (Placeholder)
-               ----------------------------------------------------------------------- */ -}}
-          {{- if eq $provider "cnpg" }}
-
-          {{- /* CNPG Resource Calculation */ -}}
-          {{- $cnpgCpuReq := "500m" }}
-          {{- $cnpgCpuLim := "1000m" }}
-          {{- $cnpgMemReq := "512Mi" }}
-          {{- $cnpgMemLim := "1Gi" }}
-          {{- if eq $size "medium" }}
-            {{- $cnpgCpuReq = "2" }}
-            {{- $cnpgCpuLim = "2" }}
-            {{- $cnpgMemReq = "4Gi" }}
-            {{- $cnpgMemLim = "4Gi" }}
-          {{- else if eq $size "large" }}
-            {{- $cnpgCpuReq = "4" }}
-            {{- $cnpgCpuLim = "4" }}
-            {{- $cnpgMemReq = "16Gi" }}
-            {{- $cnpgMemLim = "16Gi" }}
-          {{- end }}
-
-          {{- $cnpgInstances := 2 }}
-          {{- if $dbMultiAz }}
-            {{- $cnpgInstances = 3 }}
-          {{- end }}
-
-          {{- /* Map AWS storage types to K8s StorageClasses (simplistic mapping) */ -}}
-          {{- $cnpgStorageClass := "standard" }}
-          {{- if eq $dbStorageType "gp3" }}
-             {{- $cnpgStorageClass = "gp3-encrypted" }}
-          {{- end }}
-          {{- if eq $dbStorageType "io1" }}
-             {{- $cnpgStorageClass = "io1" }}
-          {{- end }}
-
-
-
-
-          ---
-          apiVersion: postgresql.cnpg.io/v1
-          kind: Cluster
-          metadata:
-            name: {{ $targetIdentifier }}
-            namespace: {{ $namespace }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: database
-              crossplane.io/external-name: {{ $targetIdentifier }}
-          spec:
-            instances: {{ $cnpgInstances }}
-
-            
-            # Bootstrap configuration
-            bootstrap:
-              {{- if $restoreIdentifier }}
-              recovery:
-                backup:
-                  name: {{ $restoreIdentifier }}
-              {{- else }}
-              initdb:
-                database: {{ $databaseName | default "app" }}
-                owner: {{ $dbMasterUsername | default "app" }}
-                secret:
-                  name: {{ $dbMasterPasswordSecret.name }}
-              {{- end }}
-            
-            # Storage configuration
-            storage:
-              size: {{ $dbAllocatedStorage }}Gi
-              storageClass: {{ $cnpgStorageClass }}
-            
-            # Resource Requirements
-            resources:
-              requests:
-                memory: {{ $cnpgMemReq }}
-                cpu: {{ $cnpgCpuReq }}
-              limits:
-                memory: {{ $cnpgMemLim }}
-                cpu: {{ $cnpgCpuLim }}
-          {{- end }}
   
   # Patch status fields
   - step: patch-and-transform
@@ -408,11 +324,6 @@ spec:
           policy:
             fromFieldPath: Optional
         
-        # CNPG Endpoint (Constructed via transform or assumed stable service name)
-        # We can't easily construct strings in patches without complex transforms.
-        # But for CNPG, the connection host is rarely in the Status of the Cluster resource itself in a simple generic field.
-        # It's usually `<cluster-name>-rw`.
-        
         # DB Port
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.port
@@ -436,10 +347,6 @@ spec:
         - type: MatchString
           fieldPath: status.conditions[0].status
           matchString: "True"
-        # CNPG Readiness (Direct composition)
-        - type: MatchString
-          fieldPath: status.phase
-          matchString: "Cluster in healthy state" # Approximate check, CNPG uses phase: 'Running' or conditions
   
   # Auto-ready function
   - step: auto-ready

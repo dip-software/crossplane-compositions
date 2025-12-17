@@ -4,7 +4,6 @@ metadata:
   name: myapp-aurora-cluster
   namespace: myapp
 spec:
-
   
   # Database configuration - create new Aurora PostgreSQL cluster
   database:
