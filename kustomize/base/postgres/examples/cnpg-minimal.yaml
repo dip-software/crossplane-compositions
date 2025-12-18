@@ -17,6 +17,7 @@ spec:
     # Standard configuration
     identifier: myapp-local
     databaseName: app
+    engineVersion: "18.1"
     masterUsername: appuser
     masterPasswordSecretRef:
       name: myapp-db-secret

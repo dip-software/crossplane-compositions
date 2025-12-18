@@ -5,7 +5,7 @@ metadata:
   namespace: crossplane-system
   labels:
     provider: cnpg
-    revision: "44"
+    revision: "45"
 spec:
   # Reference to the XRD
   compositeTypeRef:
@@ -142,7 +142,10 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
           type: Opaque
           data:
-            endpoint: {{ printf "%s-rw.%s.svc" $targetIdentifier $namespace | b64enc }}
+            {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
+            endpoint: {{ printf "%s:5432" $fqdn | b64enc }}
+            address: {{ $fqdn | b64enc }}
+            hostname: {{ $fqdn | b64enc }}
             port: {{ "5432" | b64enc }}
             username: {{ $dbMasterUsername | default "app" | b64enc }}
           {{- end }}
@@ -152,7 +155,10 @@ spec:
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: CompositeConnectionDetails
           data:
-            endpoint: {{ printf "%s-rw.%s.svc" $targetIdentifier $namespace | b64enc }}
+            {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
+            endpoint: {{ printf "%s:5432" $fqdn | b64enc }}
+            address: {{ $fqdn | b64enc }}
+            hostname: {{ $fqdn | b64enc }}
             port: {{ "5432" | b64enc }}
             username: {{ $dbMasterUsername | default "app" | b64enc }}
             database: {{ $databaseName | default "app" | b64enc }}
@@ -167,12 +173,7 @@ spec:
       resources:
       - name: database
         connectionDetails:
-        - type: FromFieldPath
-          name: endpoint
-          fromFieldPath: status.writeService
-        - type: FromValue
-          name: port
-          value: "5432"
+
         - type: FromValue
           name: username
           value: "appuser"
