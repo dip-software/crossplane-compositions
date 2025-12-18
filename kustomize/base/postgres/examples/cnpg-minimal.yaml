@@ -4,9 +4,12 @@ metadata:
   name: myapp-local-db
   namespace: default
 spec:
-  compositionSelector:
-    matchLabels:
-      provider: cnpg
+  crossplane:
+    writeConnectionSecretToRef:
+      name: myapp-local-db-conn
+    compositionSelector:
+      matchLabels:
+        provider: cnpg
   database:
     # Generic sizing
     size: small
@@ -19,7 +22,7 @@ spec:
       name: myapp-db-secret
       key: password
     
-    allocatedStorage: 5
+    allocatedStorage: 20
     
     # HA
     multiAz: false

@@ -135,22 +135,17 @@ spec:
         connectionDetails:
         - type: FromFieldPath
           name: endpoint
-          fromFieldPath: status.atProvider.address
-        - type: FromFieldPath
-          name: port
-          fromFieldPath: status.atProvider.port
-        - type: FromFieldPath
-          name: endpoint
           fromFieldPath: status.writeService
         - type: FromValue
           name: port
           value: "5432"
+        - type: FromValue
+          name: username
+          value: "appuser"
+        - type: FromValue
+          name: database
+          value: "app"
         
-        patches:
-        # Propagate writeConnectionSecretToRef from composite to managed resource
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.writeConnectionSecretToRef
-          toFieldPath: spec.writeConnectionSecretToRef
         
         readinessChecks:
         # CNPG Readiness
