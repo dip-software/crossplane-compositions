@@ -5,6 +5,7 @@ metadata:
   namespace: crossplane-system
   labels:
     provider: cnpg
+    revision: "44"
 spec:
   # Reference to the XRD
   compositeTypeRef:
@@ -146,6 +147,7 @@ spec:
             username: {{ $dbMasterUsername | default "app" | b64enc }}
           {{- end }}
 
+
           ---
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: CompositeConnectionDetails
@@ -191,6 +193,11 @@ spec:
         - type: MatchString
           fieldPath: status.phase
           matchString: "Cluster in healthy state"
+        
+        # Secret Readiness (Always Ready)
+      - name: connection-secret
+        readinessChecks:
+        - type: None
   
   # Auto-ready function
   - step: auto-ready
