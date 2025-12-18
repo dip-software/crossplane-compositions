@@ -20,7 +20,6 @@ spec:
       key: password
     
     # Backup settings
-    # Backup settings
     backupRetentionPeriod: 14
   
   # IAM permissions

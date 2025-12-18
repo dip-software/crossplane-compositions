@@ -92,9 +92,7 @@ spec:
                     type: integer
                     default: 5432
                     description: "Database port (defaults to 5432 for PostgreSQL)"
-                  
-
-                  
+                       
                   # Allocated storage in GB
                   allocatedStorage:
                     type: integer
@@ -147,10 +145,6 @@ spec:
                     default: false
                     description: "Enable High Availability (Multi-AZ for AWS, Replicas for CNPG)"
                   
-
-                  
-
-                
                   # Restore configuration
                   restore:
                     type: object
