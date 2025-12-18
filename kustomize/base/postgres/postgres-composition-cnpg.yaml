@@ -52,6 +52,12 @@ spec:
           {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
           {{- $dbMasterPasswordSecret := $xr.spec.database.masterPasswordSecretRef }}
 
+          {{- /* Secret Name Logic */ -}}
+          {{- $secretName := "" }}
+          {{- if $xr.spec.writeConnectionSecretToRef }}
+            {{- $secretName = $xr.spec.writeConnectionSecretToRef.name }}
+          {{- end }}
+          
           {{- /* CNPG Resource Calculation */ -}}
           {{- $cnpgCpuReq := "500m" }}
           {{- $cnpgCpuLim := "1000m" }}
@@ -68,12 +74,12 @@ spec:
             {{- $cnpgMemReq = "16Gi" }}
             {{- $cnpgMemLim = "16Gi" }}
           {{- end }}
-
+          
           {{- $cnpgInstances := 2 }}
           {{- if $dbMultiAz }}
             {{- $cnpgInstances = 3 }}
           {{- end }}
-
+          
           {{- /* Map AWS storage types to K8s StorageClasses (simplistic mapping) */ -}}
           {{- $cnpgStorageClass := "standard" }}
           {{- if eq $dbStorageType "gp3" }}
@@ -82,7 +88,7 @@ spec:
           {{- if eq $dbStorageType "io1" }}
              {{- $cnpgStorageClass = "io1" }}
           {{- end }}
-
+          
           ---
           apiVersion: postgresql.cnpg.io/v1
           kind: Cluster
@@ -124,13 +130,29 @@ spec:
                 memory: {{ $cnpgMemLim }}
                 cpu: {{ $cnpgCpuLim }}
           
+          {{- if $secretName }}
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $secretName }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
+          type: Opaque
+          data:
+            endpoint: {{ printf "%s-rw" $targetIdentifier | b64enc }}
+            port: {{ "5432" | b64enc }}
+            username: {{ $dbMasterUsername | default "app" | b64enc }}
+          {{- end }}
+
           ---
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: CompositeConnectionDetails
           data:
-            endpoint: {{ "myapp-local-rw" | b64enc }}
+            endpoint: {{ printf "%s-rw" $targetIdentifier | b64enc }}
             port: {{ "5432" | b64enc }}
-            username: {{ $dbMasterUsername | default "appuser" | b64enc }}
+            username: {{ $dbMasterUsername | default "app" | b64enc }}
             database: {{ $databaseName | default "app" | b64enc }}
   
   # Patch status fields
