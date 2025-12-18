@@ -91,6 +91,7 @@ spec:
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: database
+              crossplane.io/composition-resource-name: database
               crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
             instances: {{ $cnpgInstances }}
@@ -122,6 +123,15 @@ spec:
               limits:
                 memory: {{ $cnpgMemLim }}
                 cpu: {{ $cnpgCpuLim }}
+          
+          ---
+          apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
+          kind: CompositeConnectionDetails
+          data:
+            endpoint: {{ "myapp-local-rw" | b64enc }}
+            port: {{ "5432" | b64enc }}
+            username: {{ $dbMasterUsername | default "appuser" | b64enc }}
+            database: {{ $databaseName | default "app" | b64enc }}
   
   # Patch status fields
   - step: patch-and-transform
@@ -146,6 +156,13 @@ spec:
           name: database
           value: "app"
         
+        patches:
+        - type: ToCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: status.dbInstanceIdentifier
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.writeService
+          toFieldPath: status.dbEndpoint
         
         readinessChecks:
         # CNPG Readiness

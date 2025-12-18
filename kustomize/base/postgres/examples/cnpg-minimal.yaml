@@ -4,9 +4,9 @@ metadata:
   name: myapp-local-db
   namespace: default
 spec:
+  writeConnectionSecretToRef:
+    name: myapp-local-db-secret
   crossplane:
-    writeConnectionSecretToRef:
-      name: myapp-local-db-conn
     compositionSelector:
       matchLabels:
         provider: cnpg

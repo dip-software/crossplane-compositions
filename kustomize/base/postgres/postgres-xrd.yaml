@@ -186,17 +186,6 @@ spec:
                 default: "Delete"
                 description: "Controls whether the physical AWS resource is deleted when the Crossplane resource is deleted. Default: Delete."
 
-              # Optional: Connection secret reference
-              writeConnectionSecretToRef:
-                type: object
-                description: "Optional: Write connection details (endpoint, port, database, username) to a Kubernetes secret in the same namespace"
-                properties:
-                  name:
-                    type: string
-                    description: "Name of the secret to write connection details to"
-                required:
-                - name
-            
             required:
             - database
           
