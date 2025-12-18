@@ -141,7 +141,7 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
           type: Opaque
           data:
-            endpoint: {{ printf "%s-rw" $targetIdentifier | b64enc }}
+            endpoint: {{ printf "%s-rw.%s.svc" $targetIdentifier $namespace | b64enc }}
             port: {{ "5432" | b64enc }}
             username: {{ $dbMasterUsername | default "app" | b64enc }}
           {{- end }}
@@ -150,7 +150,7 @@ spec:
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: CompositeConnectionDetails
           data:
-            endpoint: {{ printf "%s-rw" $targetIdentifier | b64enc }}
+            endpoint: {{ printf "%s-rw.%s.svc" $targetIdentifier $namespace | b64enc }}
             port: {{ "5432" | b64enc }}
             username: {{ $dbMasterUsername | default "app" | b64enc }}
             database: {{ $databaseName | default "app" | b64enc }}
