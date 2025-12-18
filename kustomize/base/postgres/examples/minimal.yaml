@@ -4,9 +4,6 @@ metadata:
   name: myapp-minimal-db
   namespace: default
 spec:
-  compositionSelector:
-    matchLabels:
-      provider: cnpg
   database:
     identifier: myapp-minimal-db
     engineVersion: "18.1"
