@@ -9,8 +9,12 @@ rules:
   - postgresql.cnpg.io
   resources:
   - clusters
+  - clusters/status
   - backups
+  - backups/status
   - scheduledbackups
+  - scheduledbackups/status
   - poolers
+  - poolers/status
   verbs:
   - "*"
