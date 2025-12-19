@@ -6,10 +6,9 @@ metadata:
 spec:
   writeConnectionSecretToRef:
     name: myapp-local-db-secret
-  crossplane:
-    compositionSelector:
-      matchLabels:
-        provider: cnpg
+  compositionSelector:
+    matchLabels:
+      provider: cnpg
   database:
     # Generic sizing
     size: small
