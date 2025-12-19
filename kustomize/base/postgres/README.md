@@ -366,7 +366,7 @@ spec:
     identifier: myapp-prod-db
     type: rds-instance
     engine: postgres
-    engineVersion: "16.1"
+    engineVersion: "18.1"
     databaseName: myapp_production
     
     # Production instance
