@@ -327,7 +327,6 @@ spec:
     databaseName: myapp_dev
     
     # Instance configuration
-    provider: aws
     size: small
     allocatedStorage: 20
     storageType: gp3
