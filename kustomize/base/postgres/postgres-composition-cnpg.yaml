@@ -52,7 +52,7 @@ spec:
           {{- $databaseName := $xr.spec.database.databaseName | default "" }}
 
 
-          {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
+          {{- $dbMasterUsername := $xr.spec.database.masterUsername | default "" }}
           
           {{- /* Password Handling */ -}}
           {{- $dbMasterPasswordSecretName := "" }}
@@ -166,6 +166,7 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: password-secret
           type: Opaque
           data:
+             username: {{ $dbMasterUsername | default "app" | b64enc }}
              password: {{ $generatedPassword | b64enc }}
           {{ end }}
           
