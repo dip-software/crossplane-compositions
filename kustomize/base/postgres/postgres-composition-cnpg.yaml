@@ -5,7 +5,7 @@ metadata:
   namespace: crossplane-system
   labels:
     provider: cnpg
-    revision: "45"
+    revision: "47"
 spec:
   # Reference to the XRD
   compositeTypeRef:
@@ -50,8 +50,32 @@ spec:
           {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
           {{- $databaseName := $xr.spec.database.databaseName | default "" }}
+
+
           {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
-          {{- $dbMasterPasswordSecret := $xr.spec.database.masterPasswordSecretRef }}
+          
+          {{- /* Password Handling */ -}}
+          {{- $dbMasterPasswordSecretName := "" }}
+          {{- $dbMasterPasswordSecretKey := "password" }}
+          {{- $generatedPassword := "" }}
+
+          {{- if $xr.spec.database.masterPasswordSecretRef }}
+             {{- $dbMasterPasswordSecretName = $xr.spec.database.masterPasswordSecretRef.name }}
+             {{- $dbMasterPasswordSecretKey = $xr.spec.database.masterPasswordSecretRef.key | default "password" }}
+          {{- else }}
+             {{- $dbMasterPasswordSecretName = printf "%s-password" $name }}
+             {{- /* Check if secret already exists to preserve password */ -}}
+             {{- $observedResources := .observed.resources | default dict }}
+             {{- $existingSecret := index $observedResources "password-secret" }}
+             {{- if $existingSecret }}
+               {{- $generatedPassword = index $existingSecret.resource.data "password" | b64dec }}
+             {{- else }}
+               {{- $generatedPassword = randAlphaNum 24 }}
+             {{- end }}
+          {{ end }} 
+          
+          {{- $dbMasterPasswordSecret := dict "name" $dbMasterPasswordSecretName "key" $dbMasterPasswordSecretKey }}
+          {{- $dbPort := $xr.spec.database.port | default 5432 }}
 
           {{- /* Secret Name Logic */ -}}
           {{- $secretName := "" }}
@@ -131,7 +155,23 @@ spec:
                 memory: {{ $cnpgMemLim }}
                 cpu: {{ $cnpgCpuLim }}
           
+          {{- if not $xr.spec.database.masterPasswordSecretRef }}
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $dbMasterPasswordSecretName }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: password-secret
+          type: Opaque
+          stringData:
+             password: "{{ $generatedPassword }}"
+          {{- end }}
+          
           {{- if $secretName }}
+            {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
+          
           ---
           apiVersion: v1
           kind: Secret
@@ -140,28 +180,19 @@ spec:
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
+              crossplane.io/composition-resource-name: connection-secret
           type: Opaque
           data:
-            {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
-            endpoint: {{ printf "%s:5432" $fqdn | b64enc }}
-            address: {{ $fqdn | b64enc }}
-            hostname: {{ $fqdn | b64enc }}
-            port: {{ "5432" | b64enc }}
-            username: {{ $dbMasterUsername | default "app" | b64enc }}
-          {{- end }}
-
-
-          ---
-          apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
-          kind: CompositeConnectionDetails
-          data:
-            {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
-            endpoint: {{ printf "%s:5432" $fqdn | b64enc }}
-            address: {{ $fqdn | b64enc }}
-            hostname: {{ $fqdn | b64enc }}
-            port: {{ "5432" | b64enc }}
+            endpoint: {{ printf "%s:%d" $fqdn (int $dbPort) | b64enc }}
+            host: {{ $fqdn | b64enc }}
+            port: {{ printf "%d" (int $dbPort) | b64enc }}
             username: {{ $dbMasterUsername | default "app" | b64enc }}
             database: {{ $databaseName | default "app" | b64enc }}
+            sslmode: {{ "require" | b64enc }}
+            {{- if $generatedPassword }}
+            password: {{ $generatedPassword | b64enc }}
+            {{- end }}
+          {{- end }}
   
   # Patch status fields
   - step: patch-and-transform
@@ -172,15 +203,6 @@ spec:
       kind: Resources
       resources:
       - name: database
-        connectionDetails:
-
-        - type: FromValue
-          name: username
-          value: "appuser"
-        - type: FromValue
-          name: database
-          value: "app"
-        
         patches:
         - type: ToCompositeFieldPath
           fromFieldPath: metadata.name
@@ -194,11 +216,9 @@ spec:
         - type: MatchString
           fieldPath: status.phase
           matchString: "Cluster in healthy state"
-        
+                
         # Secret Readiness (Always Ready)
-      - name: connection-secret
-        readinessChecks:
-        - type: None
+
   
   # Auto-ready function
   - step: auto-ready

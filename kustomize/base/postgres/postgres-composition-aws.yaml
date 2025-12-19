@@ -88,8 +88,30 @@ spec:
           {{- $dbEngineVersion := $xr.spec.database.engineVersion | default "" }}
           {{- $dbAllocatedStorage := $xr.spec.database.allocatedStorage | default 20 }}
           {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
+
           {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
-          {{- $dbMasterPasswordSecret := $xr.spec.database.masterPasswordSecretRef }}
+          
+          {{- /* Password Handling */ -}}
+          {{- $dbMasterPasswordSecretName := "" }}
+          {{- $dbMasterPasswordSecretKey := "password" }}
+          {{- $generatedPassword := "" }}
+
+          {{- if $xr.spec.database.masterPasswordSecretRef }}
+             {{- $dbMasterPasswordSecretName = $xr.spec.database.masterPasswordSecretRef.name }}
+             {{- $dbMasterPasswordSecretKey = $xr.spec.database.masterPasswordSecretRef.key | default "password" }}
+          {{- else }}
+             {{- $dbMasterPasswordSecretName = printf "%s-password" $name }}
+             {{- /* Check if secret already exists to preserve password */ -}}
+             {{- $observedResources := .observed.resources | default dict }}
+             {{- $existingSecret := index $observedResources "password-secret" }}
+             {{- if $existingSecret }}
+               {{- $generatedPassword = index $existingSecret.resource.data "password" | b64dec }}
+             {{- else }}
+               {{- $generatedPassword = randAlphaNum 24 }}
+             {{- end }}
+          {{- end }}
+
+          {{- $dbMasterPasswordSecret := dict "name" $dbMasterPasswordSecretName "key" $dbMasterPasswordSecretKey }}
           {{- $dbBackupRetention := $xr.spec.database.backupRetentionPeriod | default 7 }}
           {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
 
@@ -138,6 +160,74 @@ spec:
           {{- $providerConfigKind = $xr.spec.providerConfigRef.kind }}
           {{- end }}
           {{- end }}
+          
+
+
+          {{- if not $xr.spec.database.masterPasswordSecretRef }}
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $dbMasterPasswordSecretName }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: password-secret
+          type: Opaque
+          data:
+            password: {{ $generatedPassword | b64enc }}
+          {{- end }}
+
+          {{- /* Connection Secret */ -}}
+          {{- $secretName := "" }}
+          {{- if $xr.spec.writeConnectionSecretToRef }}
+             {{- $secretName = $xr.spec.writeConnectionSecretToRef.name }}
+          {{- end }}
+
+          {{- if $secretName }}
+             {{- $endpoint := "" }}
+             {{- $address := "" }}
+             {{- $resourceId := "" }}
+             {{- /* We need to inspect the status of the "database" resource to get endpoint info */ -}}
+             {{- $observedResources := .observed.resources | default dict }}
+             {{- $dbResource := index $observedResources "database" }}
+             {{- if $dbResource }}
+               {{- if eq $dbType "rds-instance" }}
+                 {{- $endpoint = $dbResource.resource.status.atProvider.address | default "" }}
+                 {{- $resourceId = $dbResource.resource.status.atProvider.resourceId | default "" }}
+               {{- else }}
+                 {{- $endpoint = $dbResource.resource.status.atProvider.endpoint | default "" }}
+                 {{- $resourceId = $dbResource.resource.status.atProvider.clusterResourceId | default "" }}
+               {{- end }}
+             {{- end }}
+          
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $secretName }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
+              crossplane.io/composition-resource-name: connection-secret
+          type: Opaque
+          data:      
+             username: {{ $dbMasterUsername | b64enc }}
+             {{- if $generatedPassword }}
+             password: {{ $generatedPassword | b64enc }}
+             {{- else }}
+             password: {{ "derived-from-secret" | b64enc }} 
+             {{- end }}
+             port: {{ printf "%d" (int $dbPort) | b64enc }}
+             database: {{ "postgres" | b64enc }}
+             {{- if $databaseName }}
+             database: {{ $databaseName | b64enc }}
+             {{- end }}
+             {{- if $endpoint }}
+             host: {{ $endpoint | b64enc }}
+             endpoint: {{ printf "%s:%d" $endpoint (int $dbPort) | b64enc }}
+             {{- end }}
+             sslmode: {{ "require" | b64enc }}
+          {{ end }}
           
           {{- /* Create Subnet Group */ -}}
           ---
@@ -291,26 +381,16 @@ spec:
       apiVersion: pt.fn.crossplane.io/v1beta1
       kind: Resources
       resources:
+
       - name: database
-        connectionDetails:
-        - type: FromFieldPath
-          name: endpoint
-          fromFieldPath: status.atProvider.address
-        - type: FromFieldPath
-          name: port
-          fromFieldPath: status.atProvider.port
-        - type: FromFieldPath
-          name: endpoint
-          fromFieldPath: status.writeService
-        - type: FromValue
-          name: port
-          value: "5432"
+        connectionDetails: []
+          # We purposefully clear this to avoid conflict with our manual Secret
+          
         
+        
+        # We manually manage connection details now via the Secret resource above for the most part
+        # except for dynamic values like address/endpoint if we want to rely on the function re-running.
         patches:
-        # Propagate writeConnectionSecretToRef from composite to managed resource
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.writeConnectionSecretToRef
-          toFieldPath: spec.writeConnectionSecretToRef
         
         # DB Endpoint: Patch from address (Instance) or endpoint (Cluster)
         - type: ToCompositeFieldPath
@@ -347,6 +427,8 @@ spec:
         - type: MatchString
           fieldPath: status.conditions[0].status
           matchString: "True"
+          
+
   
   # Auto-ready function
   - step: auto-ready
