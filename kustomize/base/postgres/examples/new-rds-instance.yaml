@@ -27,10 +27,6 @@ spec:
     backupRetentionPeriod: 7
     multiAz: false
   
-  # IAM permissions
-  permissions:
-    allowConnect: true
-  
   # Tags for AWS resources
   tags:
     Application: myapp
