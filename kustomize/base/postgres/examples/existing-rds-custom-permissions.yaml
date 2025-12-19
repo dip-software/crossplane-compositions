@@ -17,9 +17,6 @@ spec:
   # IAM permissions with additional actions
   permissions:
     allowConnect: true
-    additionalActions:
-      - "rds:DescribeDBInstances"
-      - "rds:DescribeDBClusters"
   
   # Tags for IAM resources
   tags:
