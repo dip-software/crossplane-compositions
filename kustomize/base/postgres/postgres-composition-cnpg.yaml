@@ -165,9 +165,9 @@ spec:
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: password-secret
           type: Opaque
-          stringData:
-             password: "{{ $generatedPassword }}"
-          {{- end }}
+          data:
+             password: {{ $generatedPassword | b64enc }}
+          {{ end }}
           
           {{- if $secretName }}
             {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}

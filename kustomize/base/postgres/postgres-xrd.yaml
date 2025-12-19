@@ -25,6 +25,7 @@ spec:
         properties:
           spec:
             type: object
+            x-kubernetes-preserve-unknown-fields: true
             properties:
               writeConnectionSecretToRef:
                 type: object
@@ -38,14 +39,6 @@ spec:
                     description: "Namespace of the secret. If ignored, the secret is created in the same namespace as the resource."
                 required:
                 - name
-              compositionSelector:
-                type: object
-                properties:
-                  matchLabels:
-                    type: object
-                    x-kubernetes-preserve-unknown-fields: true
-                required:
-                - matchLabels
               # Database configuration
               database:
                 type: object
