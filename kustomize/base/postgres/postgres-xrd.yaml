@@ -10,10 +10,6 @@ spec:
   # Namespace scope - compositions will be namespace-scoped
   scope: Namespaced
 
-  # Default to AWS composition if no selector is provided
-  defaultCompositionRef:
-    name: postgres-aws
-
   # Explicitly define the claimNames/writeConnectionSecretToRef behavior in schema for v1alpha1
   versions:
   - name: v1alpha1

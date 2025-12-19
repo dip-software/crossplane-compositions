@@ -13,9 +13,7 @@ spec:
     databaseName: application
     port: 5432
   
-  # IAM permissions
-  permissions:
-    allowConnect: true
+
   
   # Tags for IAM resources
   tags:

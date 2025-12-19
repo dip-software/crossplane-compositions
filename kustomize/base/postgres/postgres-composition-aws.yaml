@@ -89,7 +89,7 @@ spec:
           {{- $dbAllocatedStorage := $xr.spec.database.allocatedStorage | default 20 }}
           {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
 
-          {{- $dbMasterUsername := $xr.spec.database.masterUsername }}
+          {{- $dbMasterUsername := $xr.spec.database.masterUsername | default "" }}
           
           {{- /* Password Handling */ -}}
           {{- $dbMasterPasswordSecretName := "" }}

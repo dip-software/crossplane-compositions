@@ -22,9 +22,7 @@ spec:
     # Backup settings
     backupRetentionPeriod: 14
   
-  # IAM permissions
-  permissions:
-    allowConnect: true
+
   
   # Write connection details to secret
   writeConnectionSecretToRef:

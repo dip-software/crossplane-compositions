@@ -1,0 +1,35 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: test-db-aws
+  namespace: default
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: aws
+  writeConnectionSecretToRef:
+    name: test-db-aws-conn
+  deletionPolicy: Delete
+  skipFinalSnapshot: true # Important for quick cleanup/dev
+  database:
+    identifier: test-db-aws-1
+    masterUsername: testuser
+    storageType: gp3
+    size: small
+---
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: test-db-cnpg
+  namespace: default
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: cnpg
+  writeConnectionSecretToRef:
+    name: test-db-cnpg-conn
+  database:
+    identifier: test-db-cnpg-1
+    masterUsername: testuser
+    storageType: gp3
+    size: small

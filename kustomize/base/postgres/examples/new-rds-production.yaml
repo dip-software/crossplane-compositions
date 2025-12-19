@@ -29,9 +29,7 @@ spec:
     backupRetentionPeriod: 30
     multiAz: true
   
-  # IAM permissions
-  permissions:
-    allowConnect: true
+
   
   # Write connection details to secret
   writeConnectionSecretToRef:

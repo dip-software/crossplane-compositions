@@ -13,10 +13,6 @@ spec:
     databaseName: production
     port: 5432
   
-  # IAM permissions - read-only access
-  permissions:
-    allowConnect: true
-  
   # Tags for IAM resources
   tags:
     Application: analytics

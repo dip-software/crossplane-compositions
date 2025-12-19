@@ -191,8 +191,7 @@ spec:
     databaseName: application
 
   
-  permissions:
-    allowConnect: true
+
   
   tags:
     Application: myapp
@@ -218,8 +217,7 @@ spec:
     databaseName: application
 
   
-  permissions:
-    allowConnect: true
+
 ```
 
 ### Example 3: With Connection Secret
@@ -243,8 +241,7 @@ spec:
   writeConnectionSecretToRef:
     name: myapp-db-credentials
   
-  permissions:
-    allowConnect: true
+
 ```
 
 The connection secret will contain:
@@ -271,8 +268,7 @@ spec:
     type: rds-instance
 
   
-  permissions:
-    allowConnect: true
+
 ```
 
 ## Creating New Databases
@@ -342,8 +338,7 @@ spec:
     multiAz: false
 
   
-  permissions:
-    allowConnect: true
+
   
   tags:
     Environment: development
@@ -388,8 +383,7 @@ spec:
   writeConnectionSecretToRef:
     name: myapp-prod-db-connection
   
-  permissions:
-    allowConnect: true
+
   
   tags:
     Environment: production
@@ -427,8 +421,7 @@ spec:
   writeConnectionSecretToRef:
     name: myapp-aurora-connection
   
-  permissions:
-    allowConnect: true
+
 ```
 
 ### Create Mode Configuration Options
@@ -653,18 +646,7 @@ make clean
 
 ## Advanced Configuration
 
-### Custom IAM Permissions
 
-Add additional IAM actions beyond basic connect:
-
-```yaml
-spec:
-  permissions:
-    allowConnect: true
-    additionalActions:
-      - "rds:DescribeDBInstances"
-      - "rds:DescribeDBClusters"
-```
 
 ### Explicit Resource ID
 

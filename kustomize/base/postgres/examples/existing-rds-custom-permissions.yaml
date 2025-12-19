@@ -14,10 +14,6 @@ spec:
     # Provide the resource ID directly for more precise IAM policy
     resourceId: db-CUSTOMRESOURCEID123
   
-  # IAM permissions with additional actions
-  permissions:
-    allowConnect: true
-  
   # Tags for IAM resources
   tags:
     Application: myapp
