@@ -137,7 +137,7 @@ spec:
           {{- $databaseSecurityGroupId := index $databaseSg "id" | default "" }}
           {{- $subnetGroups := index $servicesVpc "subnetGroups" | default dict }}
           {{- $databaseSubnetGroup := index $subnetGroups "database" | default dict }}
-          {{- $databaseSubnetIds := index $databaseSubnetGroup "subnet_ids" | default list }}
+          {{- $databaseSubnetGroupName := index $databaseSubnetGroup "name" | default "" }}
           
           {{- $tags := dict }}
           {{- if $xr.spec.tags }}
@@ -229,30 +229,6 @@ spec:
              sslmode: {{ "require" | b64enc }}
           {{ end }}
           
-          {{- /* Create Subnet Group */ -}}
-          ---
-          apiVersion: rds.aws.m.upbound.io/v1beta1
-          kind: SubnetGroup
-          metadata:
-            name: {{ $name }}-subnet-group
-            namespace: {{ $namespace }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: rds-subnet-group
-          spec:
-            forProvider:
-              region: {{ $awsRegion }}
-              description: "Subnet group for {{ $name }} database"
-              subnetIds:
-                {{- range $databaseSubnetIds }}
-                - {{ . }}
-                {{- end }}
-              tags:
-                {{- range $key, $value := $tags }}
-                {{ $key }}: {{ $value | quote }}
-                {{- end }}
-            providerConfigRef:
-              name: {{ $providerConfigName }}
-              kind: {{ $providerConfigKind }}
           
           {{- if eq $dbType "rds-instance" }}
           ---
@@ -297,8 +273,7 @@ spec:
               storageEncrypted: true
 
               port: {{ $dbPort }}
-              dbSubnetGroupNameRef:
-                name: {{ $name }}-subnet-group
+              dbSubnetGroupName: {{ $databaseSubnetGroupName }}
               vpcSecurityGroupIds:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
@@ -354,8 +329,7 @@ spec:
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
               {{- end }}
 
-              dbSubnetGroupNameRef:
-                name: {{ $name }}-subnet-group
+              dbSubnetGroupName: {{ $databaseSubnetGroupName }}
               vpcSecurityGroupIds:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
