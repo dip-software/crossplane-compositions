@@ -181,7 +181,6 @@ spec:
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
-              crossplane.io/composition-resource-name: connection-secret
           type: Opaque
           data:
             endpoint: {{ printf "%s:%d" $fqdn (int $dbPort) | b64enc }}
@@ -211,12 +210,23 @@ spec:
         - type: ToCompositeFieldPath
           fromFieldPath: status.writeService
           toFieldPath: status.dbEndpoint
-        
         readinessChecks:
         # CNPG Readiness
-        - type: MatchString
-          fieldPath: status.phase
+        - fieldPath: status.phase
           matchString: "Cluster in healthy state"
+          type: MatchString
+      
+      - name: password-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
+
+      - name: connection-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
                 
         # Secret Readiness (Always Ready)
 

@@ -208,7 +208,6 @@ spec:
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
-              crossplane.io/composition-resource-name: connection-secret
           type: Opaque
           data:      
              username: {{ $dbMasterUsername | b64enc }}
@@ -358,13 +357,8 @@ spec:
 
       - name: database
         connectionDetails: []
-          # We purposefully clear this to avoid conflict with our manual Secret
-          
-        
-        
-        # We manually manage connection details now via the Secret resource above for the most part
-        # except for dynamic values like address/endpoint if we want to rely on the function re-running.
         patches:
+
         
         # DB Endpoint: Patch from address (Instance) or endpoint (Cluster)
         - type: ToCompositeFieldPath
@@ -401,6 +395,18 @@ spec:
         - type: MatchString
           fieldPath: status.conditions[0].status
           matchString: "True"
+          
+      - name: password-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
+
+      - name: connection-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
           
 
   
