@@ -77,8 +77,8 @@ spec:
           {{- $dbMasterPasswordSecret := dict "name" $dbMasterPasswordSecretName "key" $dbMasterPasswordSecretKey }}
           {{- $dbPort := $xr.spec.database.port | default 5432 }}
 
-          {{- /* Secret Name Logic */ -}}
-          {{- $secretName := "" }}
+          {{- /* Secret Name Logic - Always created */ -}}
+          {{- $secretName := printf "%s-connection" $name }}
           {{- if $xr.spec.writeConnectionSecretToRef }}
             {{- $secretName = $xr.spec.writeConnectionSecretToRef.name }}
           {{- end }}
@@ -155,23 +155,30 @@ spec:
                 memory: {{ $cnpgMemLim }}
                 cpu: {{ $cnpgCpuLim }}
           
-          {{- if not $xr.spec.database.masterPasswordSecretRef }}
+          {{- /* Password Secret - Always created (stub if user provided) */ -}}
+          {{- $pwSecretName := printf "%s-password" $name }}
+          {{- if $xr.spec.database.masterPasswordSecretRef }}
+             {{- $pwSecretName = printf "%s-password-stub" $name }}
+          {{- end }}
+
           ---
           apiVersion: v1
           kind: Secret
           metadata:
-            name: {{ $dbMasterPasswordSecretName }}
+            name: {{ $pwSecretName }}
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: password-secret
           type: Opaque
           data:
+             {{- if not $xr.spec.database.masterPasswordSecretRef }}
              username: {{ $dbMasterUsername | default "app" | b64enc }}
              password: {{ $generatedPassword | b64enc }}
-          {{ end }}
+             {{- else }}
+             stub: {{ "true" | b64enc }}
+             {{- end }}
           
-          {{- if $secretName }}
-            {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
+          {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
           
           ---
           apiVersion: v1
@@ -192,7 +199,6 @@ spec:
             {{- if $generatedPassword }}
             password: {{ $generatedPassword | b64enc }}
             {{- end }}
-          {{- end }}
   
   # Patch status fields
   - step: patch-and-transform

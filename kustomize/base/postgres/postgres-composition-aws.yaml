@@ -163,27 +163,35 @@ spec:
           
 
 
-          {{- if not $xr.spec.database.masterPasswordSecretRef }}
+          {{- /* Password Secret - Always created (stub if user provided) */ -}}
+          {{- $pwSecretName := printf "%s-password" $name }}
+          {{- if $xr.spec.database.masterPasswordSecretRef }}
+             {{- $pwSecretName = printf "%s-password-stub" $name }}
+          {{- end }}
+
           ---
           apiVersion: v1
           kind: Secret
           metadata:
-            name: {{ $dbMasterPasswordSecretName }}
+            name: {{ $pwSecretName }}
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: password-secret
           type: Opaque
           data:
+            {{- if not $xr.spec.database.masterPasswordSecretRef }}
             password: {{ $generatedPassword | b64enc }}
-          {{- end }}
+            {{- else }}
+            stub: {{ "true" | b64enc }}
+            {{- end }}
 
-          {{- /* Connection Secret */ -}}
-          {{- $secretName := "" }}
+          {{- /* Connection Secret - Always created */ -}}
+          {{- $secretName := printf "%s-connection" $name }}
           {{- if $xr.spec.writeConnectionSecretToRef }}
              {{- $secretName = $xr.spec.writeConnectionSecretToRef.name }}
           {{- end }}
 
-          {{- if $secretName }}
+          {{- $endpoint := "" }}
              {{- $endpoint := "" }}
              {{- $address := "" }}
              {{- $resourceId := "" }}
@@ -226,7 +234,6 @@ spec:
              endpoint: {{ printf "%s:%d" $endpoint (int $dbPort) | b64enc }}
              {{- end }}
              sslmode: {{ "require" | b64enc }}
-          {{ end }}
           
           
           {{- if eq $dbType "rds-instance" }}

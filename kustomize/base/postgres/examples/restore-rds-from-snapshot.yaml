@@ -4,8 +4,6 @@ metadata:
   name: restored-app-db
   namespace: default
 spec:
-  compositionSelector:
-    matchLabels:
   database:
     # Basic Config
     type: rds-instance
