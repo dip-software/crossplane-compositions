@@ -5,7 +5,8 @@ metadata:
   namespace: default
 spec:
   writeConnectionSecretToRef:
-    name: myapp-local-db-secret
+    name: myapp-local-db-connection
+    namespace: default
   compositionSelector:
     matchLabels:
       provider: cnpg
@@ -14,14 +15,10 @@ spec:
     size: small
     
     # Standard configuration
+    masterUsername: "admin"
     identifier: myapp-local
     databaseName: app
     engineVersion: "18.1"
-    masterUsername: appuser
-    masterPasswordSecretRef:
-      name: myapp-db-secret
-      key: password
-    
     allocatedStorage: 20
     
     # HA
