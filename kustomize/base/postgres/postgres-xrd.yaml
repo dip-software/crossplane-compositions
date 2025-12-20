@@ -11,6 +11,8 @@ spec:
   # Namespace scope - compositions will be namespace-scoped
   scope: Namespaced
 
+
+
   # Default Composition
   defaultCompositionRef:
     name: postgres-aws

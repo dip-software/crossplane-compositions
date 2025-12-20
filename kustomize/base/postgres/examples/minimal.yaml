@@ -9,11 +9,12 @@ spec:
     engineVersion: "18.1"
     
     masterUsername: postgres
-    masterPasswordSecretRef:
-      name: myapp-db-password
     
     size: small
     allocatedStorage: 20
 
   writeConnectionSecretToRef:
     name: myapp-minimal-db-connection
+    namespace: default
+  
+  compositionSelector:

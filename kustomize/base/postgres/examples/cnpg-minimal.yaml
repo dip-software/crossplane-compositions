@@ -15,7 +15,7 @@ spec:
     size: small
     
     # Standard configuration
-    masterUsername: "admin"
+    masterUsername: "postgres"
     identifier: myapp-local
     databaseName: app
     engineVersion: "18.1"
