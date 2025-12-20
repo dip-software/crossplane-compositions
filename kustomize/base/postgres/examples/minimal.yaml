@@ -16,5 +16,3 @@ spec:
   writeConnectionSecretToRef:
     name: myapp-minimal-db-connection
     namespace: default
-  
-  compositionSelector:

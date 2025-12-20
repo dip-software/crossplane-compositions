@@ -7,9 +7,10 @@ spec:
   writeConnectionSecretToRef:
     name: myapp-local-db-connection
     namespace: default
-  compositionSelector:
-    matchLabels:
-      provider: cnpg
+  crossplane: 
+    compositionSelector:
+      matchLabels:
+        provider: cnpg
   database:
     # Generic sizing
     size: small
