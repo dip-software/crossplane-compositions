@@ -10,8 +10,6 @@ This Crossplane v2 composition provides a complete solution for **PostgreSQL** d
 - ✅ **Create new AWS RDS/Aurora** instances with full configuration
 - ✅ **Deploy CloudNativePG Clusters** on Kubernetes
 - ✅ **Use existing RDS instances** or **Aurora clusters** (observe-only mode)
-- ✅ **IRSA setup** with automatic IAM role and policy creation (AWS)
-- ✅ **IAM database authentication** for password-less connections (AWS)
 - ✅ **Multi-AZ deployment** support (AWS Multi-AZ / CNPG Replicas)
 - ✅ **Automatic backups** with configurable retention
 - ✅ **Encryption at rest** enforced by default
@@ -24,13 +22,11 @@ The composition supports two modes determined by which identifier field you use:
 
 ### Mode 1: **Use Existing Database** (specify `existingIdentifier`)
 - Observes existing RDS instance or Aurora cluster
-- Creates only IAM resources (role, policy)
-- Database must have IAM authentication already enabled
+- Creates connection secret with provided credentials
 - Ideal for production databases managed outside Crossplane
 
 ### Mode 2: **Create New Database** (specify `identifier`)
 - Provisions new RDS instance or Aurora cluster
-- Configures IAM authentication automatically
 - Creates DB subnet group and manages networking
 - Ideal for development, testing, or new applications
 
@@ -41,21 +37,12 @@ The composition supports two modes determined by which identifier field you use:
 **Observed Resources (Read-Only):**
 1. **RDS Instance** or **Aurora Cluster** - Existing database (metadata retrieval only)
 
-**Created Resources:**
-2. **IAM Role** - With IRSA trust policy for the specified ServiceAccount
-3. **IAM Policy** - With RDS IAM authentication permissions (`rds-db:connect`)
-4. **IAM Role Policy Attachment** - Links the policy to the role
-
 ### For New Databases (with `identifier`):
 
 **Created and Managed Resources:**
 1. **RDS Subnet Group** - Defines subnets for the database
-2. **RDS Instance** or **Aurora Cluster** - New PostgreSQL database with IAM auth enabled
-3. **IAM Role** - With IRSA trust policy for the specified ServiceAccount
-4. **IAM Policy** - With RDS IAM authentication permissions (`rds-db:connect`)
-5. **IAM Role Policy Attachment** - Links the policy to the role
+2. **RDS Instance** or **Aurora Cluster** - New PostgreSQL database
 
-**Note:** The Kubernetes ServiceAccount and PostgreSQL database user must be created and managed separately. See [Setup Instructions](#setup-instructions) below.
 
 ## Prerequisites
 
@@ -68,7 +55,6 @@ The composition requires the following Crossplane providers and functions:
 - `function-patch-and-transform` v0.9.1
 - `function-auto-ready` v0.5.1
 - `provider-aws-rds` v2.2.0
-- `provider-aws-iam` v2.2.0
 
 Install these using:
 
@@ -99,76 +85,9 @@ data:
 ### 3. RDS Database Setup
 
 Your RDS instance or Aurora cluster must have:
-- **IAM authentication enabled** (see [Enable IAM Authentication](#enable-iam-authentication))
 - Database accessible from your EKS cluster
 - Security groups configured to allow connections
 
-## Setup Instructions
-
-### Enable IAM Authentication
-
-#### For RDS Instance:
-```bash
-aws rds modify-db-instance \
-  --db-instance-identifier myapp-production-db \
-  --enable-iam-database-authentication \
-  --apply-immediately
-```
-
-#### For Aurora Cluster:
-```bash
-aws rds modify-db-cluster \
-  --db-cluster-identifier myapp-aurora-cluster \
-  --enable-iam-database-authentication \
-  --apply-immediately
-```
-
-### Create Database User with IAM Authentication
-
-Connect to your PostgreSQL database and create a user for IAM authentication:
-
-```sql
--- Create the IAM user
-CREATE USER myapp_user;
-
--- Grant rds_iam role (required for IAM authentication)
-GRANT rds_iam TO myapp_user;
-
--- Grant database access
-GRANT CONNECT ON DATABASE application TO myapp_user;
-
--- Grant schema usage
-GRANT USAGE ON SCHEMA public TO myapp_user;
-
--- Grant table permissions (adjust as needed)
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO myapp_user;
-GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA public TO myapp_user;
-
--- Grant default privileges for future tables
-ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO myapp_user;
-```
-
-### Create Kubernetes ServiceAccount
-
-After creating the Postgres resource, retrieve the IAM role ARN from the status and create a ServiceAccount:
-
-```bash
-# Get the IAM role ARN
-kubectl get postgres myapp-db-access -n myapp -o jsonpath='{.status.roleArn}'
-```
-
-Create the ServiceAccount with the annotation:
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: myapp-sa
-  namespace: myapp
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/crossplane-postgres-myapp-db-access
-```
 
 ## Usage Examples
 
@@ -181,18 +100,12 @@ metadata:
   name: myapp-db-access
   namespace: myapp
 spec:
-  serviceAccount:
-    name: myapp-sa
-  
   database:
     existingIdentifier: myapp-production-db
     type: rds-instance
     engine: postgres
     databaseName: application
 
-  
-
-  
   tags:
     Application: myapp
     Environment: production
@@ -207,9 +120,6 @@ metadata:
   name: myapp-aurora-access
   namespace: myapp
 spec:
-  serviceAccount:
-    name: myapp-sa
-  
   database:
     existingIdentifier: myapp-aurora-cluster
     type: aurora-cluster
@@ -229,9 +139,6 @@ metadata:
   name: myapp-db-with-secret
   namespace: myapp
 spec:
-  serviceAccount:
-    name: myapp-sa
-  
   database:
     existingIdentifier: myapp-production-db
     type: rds-instance
@@ -244,14 +151,67 @@ spec:
 
 ```
 
-The connection secret will contain:
-- `endpoint`: Database endpoint hostname
-- `port`: Database port
-- `database`: Database name
-- `username`: IAM database username
-- `password-note`: Reminder to use IAM authentication
+### Connection Secret Schema
 
-### Example 4: Read-Only Access
+Both `aws` and `cnpg` providers verify and populate the same connection secret schema, ensuring application portability.
+
+| Key | Description | Example |
+|-----|-------------|---------|
+| `host` | Database hostname | `myapp-db.cluster-ro.abcdef.us-east-1.rds.amazonaws.com` |
+| `port` | Database port | `5432` |
+| `username` | Connection username | `postgres` or `app_user` |
+| `password` | Connection password | `secure_random_string` |
+| `database` | Database name | `app` |
+| `sslmode` | SSL connection mode | `require` |
+| `endpoint` | Hostname + Port | `myapp-db...:5432` |
+
+### Example 4: Unified Application Deployment
+
+Since the secret structure is identical for both providers, you can use the same application manifest for both.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  containers:
+  - name: app
+    image: my-app:latest
+    env:
+    - name: PGHOST
+      valueFrom:
+        secretKeyRef:
+          name: myapp-db-connection
+          key: host
+    - name: PGPORT
+      valueFrom:
+        secretKeyRef:
+          name: myapp-db-connection
+          key: port
+    - name: PGUSER
+      valueFrom:
+        secretKeyRef:
+          name: myapp-db-connection
+          key: username
+    - name: PGPASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: myapp-db-connection
+          key: password
+    - name: PGDATABASE
+      valueFrom:
+        secretKeyRef:
+          name: myapp-db-connection
+          key: database
+    - name: PGSSLMODE
+      valueFrom:
+        secretKeyRef:
+          name: myapp-db-connection
+          key: sslmode
+```
+
+### Example 5: Read-Only Access
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -260,9 +220,6 @@ metadata:
   name: analytics-readonly-db
   namespace: analytics
 spec:
-  serviceAccount:
-    name: analytics-reader-sa
-  
   database:
     existingIdentifier: production-main-db
     type: rds-instance
@@ -308,7 +265,7 @@ rm password.txt
 - Sealed Secrets
 - SOPS (Secrets OPerationS)
 
-### Example 5: Create Development Database
+### Example 6: Create Development Database
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -345,7 +302,7 @@ spec:
     Team: platform
 ```
 
-### Example 6: Create Production Database
+### Example 7: Create Production Database
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -354,9 +311,6 @@ metadata:
   name: myapp-prod-db
   namespace: myapp
 spec:
-  serviceAccount:
-    name: myapp-prod-sa
-  
   database:
     identifier: myapp-prod-db
     type: rds-instance
@@ -390,7 +344,7 @@ spec:
     CostCenter: engineering
 ```
 
-### Example 7: Create Aurora PostgreSQL Cluster
+### Example 8: Create Aurora PostgreSQL Cluster
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -399,9 +353,6 @@ metadata:
   name: myapp-aurora
   namespace: myapp
 spec:
-  serviceAccount:
-    name: myapp-aurora-sa
-  
   database:
     identifier: myapp-aurora-prod
     type: aurora-cluster
@@ -448,117 +399,43 @@ spec:
 
 ## Connecting to the Database
 
-### Using Python (psycopg2 or psycopg3)
+### Using Golang (pgx)
 
-```python
-import boto3
-import psycopg2
+#### Standard Connection (Unified)
+If you rely on the connection secret (as shown in the [Unified Application Deployment](#example-4-unified-application-deployment) example), `pgx` will automatically use the standard environment variables (`PGHOST`, `PGUSER`, `PGPASSWORD`, etc.).
 
-# Generate IAM authentication token
-rds_client = boto3.client('rds', region_name='us-east-1')
-token = rds_client.generate_db_auth_token(
-    DBHostname='myapp-db.abc123.us-east-1.rds.amazonaws.com',
-    Port=5432,
-    DBUsername='myapp_user',
-    Region='us-east-1'
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/jackc/pgx/v5"
 )
 
-# Connect using the token as password
-conn = psycopg2.connect(
-    host='myapp-db.abc123.us-east-1.rds.amazonaws.com',
-    port=5432,
-    database='application',
-    user='myapp_user',
-    password=token,
-    sslmode='require'
-)
+func main() {
+    // Connect using environment variables (PGHOST, PGUSER, PGPASSWORD, etc.)
+    conn, err := pgx.Connect(context.Background(), "") // Empty string = use env vars
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+        os.Exit(1)
+    }
+    defer conn.Close(context.Background())
+
+    var version string
+    err = conn.QueryRow(context.Background(), "SELECT version()").Scan(&version)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+        os.Exit(1)
+    }
+
+    fmt.Println(version)
+}
 ```
 
-### Using Python (SQLAlchemy)
-
-```python
-import boto3
-from sqlalchemy import create_engine, event
-from sqlalchemy.engine.url import URL
-
-def get_iam_token():
-    rds_client = boto3.client('rds', region_name='us-east-1')
-    return rds_client.generate_db_auth_token(
-        DBHostname='myapp-db.abc123.us-east-1.rds.amazonaws.com',
-        Port=5432,
-        DBUsername='myapp_user',
-        Region='us-east-1'
-    )
-
-# Create engine
-url = URL.create(
-    drivername='postgresql+psycopg2',
-    username='myapp_user',
-    password=get_iam_token(),
-    host='myapp-db.abc123.us-east-1.rds.amazonaws.com',
-    port=5432,
-    database='application',
-    query={'sslmode': 'require'}
-)
-
-engine = create_engine(url)
-
-# Optionally: refresh token before each connection
-@event.listens_for(engine, "do_connect")
-def receive_do_connect(dialect, conn_rec, cargs, cparams):
-    cparams['password'] = get_iam_token()
-```
-
-### Using Node.js (pg library)
-
-```javascript
-const AWS = require('aws-sdk');
-const { Client } = require('pg');
-
-// Create RDS signer
-const signer = new AWS.RDS.Signer({
-  region: 'us-east-1',
-  hostname: 'myapp-db.abc123.us-east-1.rds.amazonaws.com',
-  port: 5432,
-  username: 'myapp_user'
-});
-
-// Get authentication token
-signer.getAuthToken({}, (err, token) => {
-  if (err) {
-    console.error('Could not get auth token:', err);
-    return;
-  }
-
-  // Connect to database
-  const client = new Client({
-    host: 'myapp-db.abc123.us-east-1.rds.amazonaws.com',
-    port: 5432,
-    user: 'myapp_user',
-    password: token,
-    database: 'application',
-    ssl: { rejectUnauthorized: false }
-  });
-
-  client.connect();
-});
-```
-
-### Using AWS CLI (for testing)
-
-```bash
-# Generate authentication token
-TOKEN=$(aws rds generate-db-auth-token \
-  --hostname myapp-db.abc123.us-east-1.rds.amazonaws.com \
-  --port 5432 \
-  --username myapp_user \
-  --region us-east-1)
-
-# Connect using psql
-psql "host=myapp-db.abc123.us-east-1.rds.amazonaws.com port=5432 dbname=application user=myapp_user password=$TOKEN sslmode=require"
-```
-
-## Status Fields
+### Status Fields
 
 After creating a Postgres resource, you can check its status:
 
@@ -568,14 +445,13 @@ kubectl get postgres myapp-db-access -n myapp -o yaml
 
 Status fields include:
 - `dbInstanceIdentifier`: RDS instance or Aurora cluster identifier
-- `dbResourceId`: RDS resource ID used in IAM policy
-- `dbEndpoint`: Database endpoint hostname
-- `dbPort`: Database port
-- `databaseName`: Database name
-
-- `roleArn`: ARN of the created IAM role (use this for ServiceAccount annotation)
-- `accountId`: AWS account ID
-- `connectionString`: PostgreSQL connection string template
+- `dbResourceId`: RDS resource ID
+The connection secret will contain:
+- `endpoint`: Database endpoint hostname
+- `port`: Database port
+- `database`: Database name
+- `username`: Database username
+- `password`: Database password
 
 ## Troubleshooting
 
@@ -587,44 +463,6 @@ Status fields include:
 1. Check security groups allow traffic from EKS nodes
 2. Verify database is in same VPC or has proper networking
 3. Check RDS instance status: `aws rds describe-db-instances --db-instance-identifier <name>`
-
-### Authentication Failed
-
-**Problem**: IAM authentication fails
-
-**Solutions**:
-1. Verify IAM authentication is enabled on RDS instance
-2. Check database user was created with `GRANT rds_iam`
-3. Verify IAM role ARN is correctly annotated on ServiceAccount
-4. Check token generation is working: test with AWS CLI
-5. Verify pod has IRSA configured correctly (check AWS_ROLE_ARN env var)
-
-### IAM Policy Issues
-
-**Problem**: IAM policy doesn't allow connection
-
-**Solutions**:
-1. Check database resource ID is correct in status
-2. Verify IAM policy resource ARN matches: `arn:aws:rds-db:REGION:ACCOUNT:dbuser:RESOURCE_ID/USERNAME`
-3. If resource ID not auto-detected, provide it explicitly in spec: `spec.database.resourceId`
-
-### Token Expiration
-
-**Problem**: Connection works but fails after 15 minutes
-
-**Solution**: IAM authentication tokens expire after 15 minutes. Your application must:
-1. Generate a new token before each connection, OR
-2. Use a connection pool with token refresh logic
-
-### ServiceAccount Not Working
-
-**Problem**: Pod can't assume IAM role
-
-**Solutions**:
-1. Verify ServiceAccount has the annotation: `eks.amazonaws.com/role-arn`
-2. Check pod is using the correct ServiceAccount
-3. Verify OIDC provider is configured correctly in EKS
-4. Check IAM role trust policy matches the ServiceAccount namespace and name
 
 ## Testing
 
@@ -645,8 +483,6 @@ make clean
 ```
 
 ## Advanced Configuration
-
-
 
 ### Explicit Resource ID
 
@@ -698,46 +534,3 @@ spec:
 13. **Encryption**: Keep `storageEncrypted: true` (default)
 14. **Security Groups**: Restrict ingress to only necessary CIDR blocks
 15. **Instance Sizing**: Choose appropriate instance class for workload
-
-### VPC Security Group Example
-
-```yaml
-# Example security group rules for RDS
-# Allow PostgreSQL access only from EKS nodes
-Type: ingress
-Protocol: TCP
-Port: 5432
-Source: <EKS-Node-Security-Group-ID>
-```
-
-## Current Limitations
-
-- Does not automatically create PostgreSQL IAM users (must be done manually after DB creation)
-- Aurora cluster instance provisioning not included (cluster only, add instances separately)
-- No automated schema migration or user provisioning
-
-## Future Roadmap
-
-Planned enhancements:
-- **CloudNativePG Integration**: Support for Kubernetes-native PostgreSQL operators
-- **Automatic User Provisioning**: Create IAM database users automatically
-- **Schema Migration**: Integrate with Flyway or Liquibase for migrations
-- **Connection Pooling**: PgBouncer sidecar integration
-- **Read Replicas**: Automated read replica provisioning
-- **Monitoring Integration**: CloudWatch and Prometheus metrics
-- **Automated Failover**: Enhanced HA configuration
-
-## References
-
-- [AWS RDS IAM Authentication](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html)
-- [EKS IRSA Documentation](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
-- [Crossplane Documentation](https://docs.crossplane.io/)
-- [PostgreSQL IAM Authentication Setup](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.Connecting.html)
-
-## Support
-
-For issues or questions:
-1. Check the [Troubleshooting](#troubleshooting) section
-2. Review the [observed-resources.md](observed-resources.md) documentation
-3. Validate your configuration using `make validate`
-4. Test rendering using `make render`
