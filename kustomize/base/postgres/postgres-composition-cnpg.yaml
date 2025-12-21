@@ -141,6 +141,8 @@ spec:
                   name: {{ $dbMasterPasswordSecret.name }}
               {{- end }}
             
+            enableSuperuserAccess: true
+            
             # Storage configuration
             storage:
               size: {{ $dbAllocatedStorage }}Gi
@@ -178,8 +180,30 @@ spec:
              stub: {{ "true" | b64enc }}
              {{- end }}
           
+
+          
           {{- $fqdn := printf "%s-rw.%s.svc" $targetIdentifier $namespace }}
           
+          ---
+          # Superuser Secret (Required for postgres user consistency)
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $targetIdentifier }}-superuser
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: superuser-secret
+              cnpg.io/userType: superuser
+              cnpg.io/cluster: {{ $targetIdentifier }}
+          type: kubernetes.io/basic-auth
+          data:
+             username: {{ "postgres" | b64enc }}
+             {{- if not $xr.spec.database.masterPasswordSecretRef }}
+             password: {{ $generatedPassword | b64enc }}
+             {{- else }}
+             stub: {{ "true" | b64enc }}
+             {{- end }}
+
           ---
           apiVersion: v1
           kind: Secret
@@ -229,6 +253,12 @@ spec:
           matchString: Secret
 
       - name: connection-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
+
+      - name: superuser-secret
         readinessChecks:
         - type: MatchString
           fieldPath: kind
