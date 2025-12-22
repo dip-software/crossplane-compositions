@@ -39,12 +39,7 @@ spec:
           {{- end }}
           
           {{- /* Identifier logic */ -}}
-          {{- $existingIdentifier := $xr.spec.parameters.existingIdentifier | default "" }}
-          {{- $dbIdentifier := $xr.spec.parameters.identifier | default "" }}
-          {{- $targetIdentifier := $dbIdentifier }}
-          {{- if $existingIdentifier }}
-          {{- $targetIdentifier = $existingIdentifier }}
-          {{- end }}
+          {{- $targetIdentifier := $xr.spec.parameters.identifier | default "" }}
           
           {{- $dbAllocatedStorage := $xr.spec.parameters.allocatedStorage | default 20 }}
           {{- $dbStorageType := $xr.spec.parameters.storageType | default "gp3" }}

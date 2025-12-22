@@ -16,28 +16,9 @@ This Crossplane v2 composition provides a complete solution for **PostgreSQL** d
 - ✅ **Connection secret output** with endpoint, port, and username
 - ✅ **Resource tagging** support
 
-## Usage Modes
-
-The composition supports two modes determined by which identifier field you use:
-
-### Mode 1: **Use Existing Database** (specify `existingIdentifier`)
-- Observes existing RDS instance or Aurora cluster
-- Creates connection secret with provided credentials
-- Ideal for production databases managed outside Crossplane
-
-### Mode 2: **Create New Database** (specify `identifier`)
-- Provisions new RDS instance or Aurora cluster
-- Creates DB subnet group and manages networking
-- Ideal for development, testing, or new applications
 
 ## Architecture
 
-### For Existing Databases (with `existingIdentifier`):
-
-**Observed Resources (Read-Only):**
-1. **RDS Instance** or **Aurora Cluster** - Existing database (metadata retrieval only)
-
-### For New Databases (with `identifier`):
 
 **Created and Managed Resources:**
 1. **RDS Subnet Group** - Defines subnets for the database
@@ -91,65 +72,6 @@ Your RDS instance or Aurora cluster must have:
 
 ## Usage Examples
 
-### Example 1: Basic RDS Instance Access
-
-```yaml
-apiVersion: dip.io/v1alpha1
-kind: Postgres
-metadata:
-  name: myapp-db-access
-  namespace: myapp
-spec:
-  database:
-    existingIdentifier: myapp-production-db
-    type: rds-instance
-    engine: postgres
-    databaseName: application
-
-  tags:
-    Application: myapp
-    Environment: production
-```
-
-### Example 2: Aurora PostgreSQL Cluster
-
-```yaml
-apiVersion: dip.io/v1alpha1
-kind: Postgres
-metadata:
-  name: myapp-aurora-access
-  namespace: myapp
-spec:
-  database:
-    existingIdentifier: myapp-aurora-cluster
-    type: aurora-cluster
-    engine: postgres
-    databaseName: application
-
-  
-
-```
-
-### Example 3: With Connection Secret
-
-```yaml
-apiVersion: dip.io/v1alpha1
-kind: Postgres
-metadata:
-  name: myapp-db-with-secret
-  namespace: myapp
-spec:
-  database:
-    existingIdentifier: myapp-production-db
-    type: rds-instance
-
-    resourceId: db-ABCDEFGHIJKLMNOP123456  # Optional: provide if known
-  
-  writeConnectionSecretToRef:
-    name: myapp-db-credentials
-  
-
-```
 
 ### Connection Secret Schema
 
@@ -211,28 +133,9 @@ spec:
           key: sslmode
 ```
 
-### Example 5: Read-Only Access
 
-```yaml
-apiVersion: dip.io/v1alpha1
-kind: Postgres
-metadata:
-  name: analytics-readonly-db
-  namespace: analytics
-spec:
-  database:
-    existingIdentifier: production-main-db
-    type: rds-instance
 
-  
-
-```
-
-## Creating New Databases
-
-The composition can provision new RDS PostgreSQL instances or Aurora clusters by specifying the `identifier` field (without `existingIdentifier`).
-
-### Prerequisites for Create Mode
+### Database Creation Prerequisites
 
 Before creating a new database, you need:
 
@@ -265,7 +168,7 @@ rm password.txt
 - Sealed Secrets
 - SOPS (Secrets OPerationS)
 
-### Example 6: Create Development Database
+### Example 1: Create Development Database
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -302,7 +205,7 @@ spec:
     Team: platform
 ```
 
-### Example 7: Create Production Database
+### Example 2: Create Production Database
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -344,7 +247,7 @@ spec:
     CostCenter: engineering
 ```
 
-### Example 8: Create Aurora PostgreSQL Cluster
+### Example 3: Create Aurora PostgreSQL Cluster
 
 ```yaml
 apiVersion: dip.io/v1alpha1
@@ -375,25 +278,20 @@ spec:
 
 ```
 
-### Create Mode Configuration Options
+### Configuration Options
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `identifier` | No** | - | Name for new database (use this to create) |
-| `existingIdentifier` | No** | - | Existing database name (use this to observe) |
+| `identifier` | Yes | - | Name of the database resource |
 | `provider` | No | `aws` | Backend provider: `aws` or `cnpg` |
 | `size` | No | `small` | T-shirt size: `small`, `medium`, `large` |
-| `engineVersion` | Yes* | - | PostgreSQL engine version (e.g., '18.1', '16.1') |
-| `allocatedStorage` | Yes* | - | Storage in GB (minimum 20) |
+| `engineVersion` | Yes | - | PostgreSQL engine version (e.g., '18.1', '16.1') |
+| `allocatedStorage` | Yes | - | Storage in GB (minimum 20) |
 | `storageType` | No | `gp3` | Storage type: gp2, gp3, io1 |
-| `masterUsername` | Yes* | - | Master database username |
-| `masterPasswordSecretRef` | Yes* | - | Reference to password secret |
+| `masterUsername` | Yes | - | Master database username |
+| `masterPasswordSecretRef` | Yes | - | Reference to password secret |
 | `backupRetentionPeriod` | No | `7` | Backup retention days (0-35) |
 | `multiAz` | No | `false` | Enable Multi-AZ deployment |
-
-
-*Required only when creating a new database (using `identifier`)  
-**Either `identifier` or `existingIdentifier` must be provided (not both)
 
 **Note:** VPC configuration (subnets and security groups) is automatically extracted from the `environmentConfig` resource. The composition uses the database subnet group and database security group defined in the environment configuration.
 

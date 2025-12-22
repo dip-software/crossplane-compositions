@@ -71,13 +71,8 @@ spec:
             {{- $restoreIdentifier = $xr.spec.parameters.restore.sourceIdentifier }}
           {{- end }}
           
-          {{- /* Determine identifier: Use existingIdentifier if set (Import/Active Manage), else identifier (Create) */ -}}
-          {{- $existingIdentifier := $xr.spec.parameters.existingIdentifier | default "" }}
-          {{- $dbIdentifier := $xr.spec.parameters.identifier | default "" }}
-          {{- $targetIdentifier := $dbIdentifier }}
-          {{- if $existingIdentifier }}
-          {{- $targetIdentifier = $existingIdentifier }}
-          {{- end }}
+          {{- /* Determine identifier */ -}}
+          {{- $targetIdentifier := $xr.spec.parameters.identifier | default "" }}
           
           {{- $dbType := $xr.spec.parameters.type | default "rds-instance" }}
           {{- $dbEngine := $xr.spec.parameters.engine | default "postgres" }}
@@ -246,9 +241,6 @@ spec:
               crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
 
-            {{- if $existingIdentifier }}
-            managementPolicies: ["Observe"]
-            {{- end }}
             forProvider:
               identifier: {{ $targetIdentifier }}
               region: {{ $awsRegion }}
@@ -308,9 +300,6 @@ spec:
               crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
 
-            {{- if $existingIdentifier }}
-            managementPolicies: ["Observe"]
-            {{- end }}
             forProvider:
               clusterIdentifier: {{ $targetIdentifier }}
               region: {{ $awsRegion }}
