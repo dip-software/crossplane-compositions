@@ -11,7 +11,7 @@ spec:
     compositionSelector:
       matchLabels:
         provider: cnpg
-  database:
+  parameters:
     # Generic sizing
     size: small
     

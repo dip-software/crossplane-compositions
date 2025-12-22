@@ -6,7 +6,7 @@ metadata:
 spec:
   
   # Database configuration - read-only access to production database
-  database:
+  parameters:
     existingIdentifier: production-main-db
     type: rds-instance
     engine: postgres

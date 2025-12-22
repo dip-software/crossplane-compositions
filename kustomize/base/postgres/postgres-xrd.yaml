@@ -43,7 +43,7 @@ spec:
                 required:
                 - name
               # Database configuration
-              database:
+              parameters:
                 type: object
                 description: "RDS PostgreSQL database configuration"
                 properties:
@@ -197,7 +197,7 @@ spec:
                 description: "Controls whether the physical AWS resource is deleted when the Crossplane resource is deleted. Default: Delete."
 
             required:
-            - database
+            - parameters
           
           status:
             type: object

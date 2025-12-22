@@ -4,7 +4,7 @@ metadata:
   name: myapp-minimal-db
   namespace: default
 spec:
-  database:
+  parameters:
     identifier: myapp-minimal-db
     engineVersion: "18.1"
     

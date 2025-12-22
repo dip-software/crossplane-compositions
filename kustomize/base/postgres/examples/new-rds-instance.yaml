@@ -6,7 +6,7 @@ metadata:
 spec:
   
   # Database configuration - create new RDS instance
-  database:
+  parameters:
     identifier: myapp-development-db
     type: rds-instance
     engine: postgres

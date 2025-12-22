@@ -30,38 +30,38 @@ spec:
           {{- $name := $xr.metadata.name }}
           
           {{- /* T-Shirt Sizing Map */ -}}
-          {{- $size := $xr.spec.database.size | default "small" }}
+          {{- $size := $xr.spec.parameters.size | default "small" }}
           
           {{- /* Restore Configuration */ -}}
           {{- $restoreIdentifier := "" }}
-          {{- if $xr.spec.database.restore }}
-            {{- $restoreIdentifier = $xr.spec.database.restore.sourceIdentifier }}
+          {{- if $xr.spec.parameters.restore }}
+            {{- $restoreIdentifier = $xr.spec.parameters.restore.sourceIdentifier }}
           {{- end }}
           
           {{- /* Identifier logic */ -}}
-          {{- $existingIdentifier := $xr.spec.database.existingIdentifier | default "" }}
-          {{- $dbIdentifier := $xr.spec.database.identifier | default "" }}
+          {{- $existingIdentifier := $xr.spec.parameters.existingIdentifier | default "" }}
+          {{- $dbIdentifier := $xr.spec.parameters.identifier | default "" }}
           {{- $targetIdentifier := $dbIdentifier }}
           {{- if $existingIdentifier }}
           {{- $targetIdentifier = $existingIdentifier }}
           {{- end }}
           
-          {{- $dbAllocatedStorage := $xr.spec.database.allocatedStorage | default 20 }}
-          {{- $dbStorageType := $xr.spec.database.storageType | default "gp3" }}
-          {{- $dbMultiAz := $xr.spec.database.multiAz | default false }}
-          {{- $databaseName := $xr.spec.database.databaseName | default "" }}
+          {{- $dbAllocatedStorage := $xr.spec.parameters.allocatedStorage | default 20 }}
+          {{- $dbStorageType := $xr.spec.parameters.storageType | default "gp3" }}
+          {{- $dbMultiAz := $xr.spec.parameters.multiAz | default false }}
+          {{- $databaseName := $xr.spec.parameters.databaseName | default "" }}
 
 
-          {{- $dbMasterUsername := $xr.spec.database.masterUsername | default "" }}
+          {{- $dbMasterUsername := $xr.spec.parameters.masterUsername | default "" }}
           
           {{- /* Password Handling */ -}}
           {{- $dbMasterPasswordSecretName := "" }}
           {{- $dbMasterPasswordSecretKey := "password" }}
           {{- $generatedPassword := "" }}
 
-          {{- if $xr.spec.database.masterPasswordSecretRef }}
-             {{- $dbMasterPasswordSecretName = $xr.spec.database.masterPasswordSecretRef.name }}
-             {{- $dbMasterPasswordSecretKey = $xr.spec.database.masterPasswordSecretRef.key | default "password" }}
+          {{- if $xr.spec.parameters.masterPasswordSecretRef }}
+             {{- $dbMasterPasswordSecretName = $xr.spec.parameters.masterPasswordSecretRef.name }}
+             {{- $dbMasterPasswordSecretKey = $xr.spec.parameters.masterPasswordSecretRef.key | default "password" }}
           {{- else }}
              {{- $dbMasterPasswordSecretName = printf "%s-password" $name }}
              {{- /* Check if secret already exists to preserve password */ -}}
@@ -75,7 +75,7 @@ spec:
           {{ end }} 
           
           {{- $dbMasterPasswordSecret := dict "name" $dbMasterPasswordSecretName "key" $dbMasterPasswordSecretKey }}
-          {{- $dbPort := $xr.spec.database.port | default 5432 }}
+          {{- $dbPort := $xr.spec.parameters.port | default 5432 }}
 
           {{- /* Secret Name Logic - Always created */ -}}
           {{- $secretName := printf "%s-connection" $name }}
@@ -159,7 +159,7 @@ spec:
           
           {{- /* Password Secret - Always created (stub if user provided) */ -}}
           {{- $pwSecretName := printf "%s-password" $name }}
-          {{- if $xr.spec.database.masterPasswordSecretRef }}
+          {{- if $xr.spec.parameters.masterPasswordSecretRef }}
              {{- $pwSecretName = printf "%s-password-stub" $name }}
           {{- end }}
 
@@ -173,7 +173,7 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: password-secret
           type: Opaque
           data:
-             {{- if not $xr.spec.database.masterPasswordSecretRef }}
+             {{- if not $xr.spec.parameters.masterPasswordSecretRef }}
              username: {{ $dbMasterUsername | default "app" | b64enc }}
              password: {{ $generatedPassword | b64enc }}
              {{- else }}
@@ -198,7 +198,7 @@ spec:
           type: kubernetes.io/basic-auth
           data:
              username: {{ "postgres" | b64enc }}
-             {{- if not $xr.spec.database.masterPasswordSecretRef }}
+             {{- if not $xr.spec.parameters.masterPasswordSecretRef }}
              password: {{ $generatedPassword | b64enc }}
              {{- else }}
              stub: {{ "true" | b64enc }}

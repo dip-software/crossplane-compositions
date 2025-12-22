@@ -6,7 +6,7 @@ metadata:
 spec:
   
   # Database configuration - create new Aurora PostgreSQL cluster
-  database:
+  parameters:
     identifier: myapp-aurora-prod
     type: aurora-cluster
     engine: postgres
