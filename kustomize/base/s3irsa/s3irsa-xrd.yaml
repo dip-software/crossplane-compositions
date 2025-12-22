@@ -40,7 +40,7 @@ spec:
                 description: "Optional: Name of an existing S3 bucket to use. If not provided, a new bucket will be created."
               
               # Optional: Bucket configuration (only used when creating new bucket)
-              bucketConfig:
+              parameters:
                 type: object
                 description: "Configuration for new S3 bucket (ignored if existingBucketName is provided)"
                 properties:

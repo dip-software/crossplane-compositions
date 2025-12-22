@@ -80,7 +80,7 @@ metadata:
   namespace: my-app
 spec:
   serviceAccountName: my-app-sa
-  bucketConfig:
+  parameters:
     name: my-app-data-bucket
     versioning: true
     encryption:
@@ -119,7 +119,7 @@ metadata:
   namespace: backup-system
 spec:
   serviceAccountName: backup-writer-sa
-  bucketConfig:
+  parameters:
     name: backup-archives-encrypted
     versioning: true
     encryption:
@@ -206,10 +206,10 @@ The AWS SDK will automatically use the IRSA credentials from the ServiceAccount.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `existingBucketName` | string | - | Name of existing S3 bucket (if not provided, new bucket is created) |
-| `bucketConfig.name` | string | auto-generated | S3 bucket name (only for new buckets) |
-| `bucketConfig.versioning` | boolean | false | Enable S3 bucket versioning |
-| `bucketConfig.encryption.enabled` | boolean | true | Enable bucket encryption |
-| `bucketConfig.encryption.existingKmsKeyId` | string | - | Custom KMS key ARN (uses AWS managed key if not specified) |
+| `parameters.name` | string | auto-generated | S3 bucket name (only for new buckets) |
+| `parameters.versioning` | boolean | false | Enable S3 bucket versioning |
+| `parameters.encryption.enabled` | boolean | true | Enable bucket encryption |
+| `parameters.encryption.existingKmsKeyId` | string | - | Custom KMS key ARN (uses AWS managed key if not specified) |
 | `permissions.allowRead` | boolean | true | Allow read operations (GetObject, ListBucket) |
 | `permissions.allowWrite` | boolean | true | Allow write operations (PutObject, DeleteObject) |
 | `permissions.additionalActions` | array | [] | Additional S3 actions to grant |
