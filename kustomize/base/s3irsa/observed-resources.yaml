@@ -18,7 +18,7 @@ This document describes the AWS and Kubernetes resources created by the S3IRSA c
 #### 2. S3 Bucket Versioning (`s3.aws.m.upbound.io/v1beta1/BucketVersioningV2`)
 - **Name Pattern**: `{composite-name}-versioning`
 - **Purpose**: Enable version control for bucket objects
-- **Created When**: `spec.bucketConfig.versioning: true`
+- **Created When**: `spec.parameters.versioning: true`
 
 #### 3. S3 Bucket Encryption (`s3.aws.m.upbound.io/v1beta1/BucketServerSideEncryptionConfigurationV2`)
 - **Name Pattern**: `{composite-name}-encryption`

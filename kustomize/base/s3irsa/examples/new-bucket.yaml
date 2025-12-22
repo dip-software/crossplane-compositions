@@ -9,7 +9,7 @@ spec:
     name: my-app-sa
   
   # Create a new S3 bucket with custom configuration
-  bucketConfig:
+  parameters:
     # Optional: specify bucket name, otherwise auto-generated
     name: my-app-data-bucket
     

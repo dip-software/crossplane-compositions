@@ -9,9 +9,9 @@ spec:
     name: backup-writer-sa
   
   # Create a new S3 bucket with KMS encryption
-  bucketConfig:
+  parameters:
     name: backup-archives-encrypted
-    versioning: true
+    versioning: false
     
     # Use a custom KMS key for encryption
     encryption:

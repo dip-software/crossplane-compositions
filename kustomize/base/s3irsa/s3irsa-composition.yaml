@@ -55,8 +55,8 @@ spec:
           {{- $serviceAccountName := $xr.spec.serviceAccount.name }}
           {{- $existingBucket := $xr.spec.existingBucketName }}
           
-          {{- if and $existingBucket $xr.spec.bucketConfig $xr.spec.bucketConfig.name }}
-          {{- fail "Error: existingBucketName and bucketConfig.name are mutually exclusive. Please specify only one." }}
+          {{- if and $existingBucket $xr.spec.parameters $xr.spec.parameters.name }}
+          {{- fail "Error: existingBucketName and parameters.name are mutually exclusive. Please specify only one." }}
           {{- end }}
           
           {{- $env := index .context "apiextensions.crossplane.io/environment" }}
@@ -70,30 +70,30 @@ spec:
           {{- $bucketName := "" }}
           {{- if $existingBucket }}
           {{- $bucketName = $existingBucket }}
-          {{- else if and $xr.spec.bucketConfig $xr.spec.bucketConfig.name }}
-          {{- $bucketName = $xr.spec.bucketConfig.name }}
+          {{- else if and $xr.spec.parameters $xr.spec.parameters.name }}
+          {{- $bucketName = $xr.spec.parameters.name }}
           {{- else }}
           {{- $bucketName = printf "%s-%s-%s" $namespace $name $awsAccountId }}
           {{- end }}
           
           {{- $encryptionEnabled := true }}
-          {{- if and $xr.spec.bucketConfig $xr.spec.bucketConfig.encryption }}
-          {{- if hasKey $xr.spec.bucketConfig.encryption "enabled" }}
-          {{- $encryptionEnabled = $xr.spec.bucketConfig.encryption.enabled }}
+          {{- if and $xr.spec.parameters $xr.spec.parameters.encryption }}
+          {{- if hasKey $xr.spec.parameters.encryption "enabled" }}
+          {{- $encryptionEnabled = $xr.spec.parameters.encryption.enabled }}
           {{- end }}
           {{- end }}
           
           {{- $useCustomKms := false }}
           {{- $kmsKeyId := "" }}
-          {{- if and $xr.spec.bucketConfig $xr.spec.bucketConfig.encryption $xr.spec.bucketConfig.encryption.existingKmsKeyId }}
+          {{- if and $xr.spec.parameters $xr.spec.parameters.encryption $xr.spec.parameters.encryption.existingKmsKeyId }}
           {{- $useCustomKms = true }}
-          {{- $kmsKeyId = $xr.spec.bucketConfig.encryption.existingKmsKeyId }}
+          {{- $kmsKeyId = $xr.spec.parameters.encryption.existingKmsKeyId }}
           {{- end }}
           
           {{- $versioningEnabled := false }}
-          {{- if and $xr.spec.bucketConfig }}
-          {{- if hasKey $xr.spec.bucketConfig "versioning" }}
-          {{- $versioningEnabled = $xr.spec.bucketConfig.versioning }}
+          {{- if and $xr.spec.parameters }}
+          {{- if hasKey $xr.spec.parameters "versioning" }}
+          {{- $versioningEnabled = $xr.spec.parameters.versioning }}
           {{- end }}
           {{- end }}
           
