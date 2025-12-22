@@ -1,0 +1,35 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-new-db
+  namespace: myapp
+spec:
+  
+  # Database configuration - create new RDS instance
+  parameters:
+    identifier: myapp-development-db
+    type: rds-instance
+    engine: postgres
+    databaseName: myapp_dev
+    port: 5432
+    
+    # Instance configuration
+    allocatedStorage: 20
+    storageType: gp3
+    
+    # Master credentials
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: myapp-db-master-password
+      key: password
+    
+    # Backup and HA
+    backupRetentionPeriod: 7
+    multiAz: false
+  
+  # Tags for AWS resources
+  tags:
+    Application: myapp
+    Environment: development
+    Team: platform
+    Provisioned: crossplane

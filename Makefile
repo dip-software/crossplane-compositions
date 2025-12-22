@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 
 # Subdirectories with Makefiles
-SUBDIRS := kustomize/base/helmapp kustomize/base/s3irsa
+SUBDIRS := kustomize/base/helmapp kustomize/base/s3irsa kustomize/base/postgres
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'

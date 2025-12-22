@@ -1,0 +1,45 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-production-db
+  namespace: myapp
+spec:
+  
+  # Database configuration - create new production RDS instance
+  parameters:
+    identifier: myapp-prod-db
+    type: rds-instance
+    engine: postgres
+    engineVersion: "18.1"
+    databaseName: myapp_production
+    port: 5432
+    
+    # Production instance configuration
+    size: large
+    allocatedStorage: 100
+    storageType: gp3
+    
+    # Master credentials from secret
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: myapp-prod-db-master-password
+      key: password
+    
+    # Production backup and HA settings
+    backupRetentionPeriod: 30
+    multiAz: true
+  
+
+  
+  # Write connection details to secret
+  writeConnectionSecretToRef:
+    name: myapp-prod-db-connection
+  
+  # Tags for AWS resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    CostCenter: "engineering"
+    Provisioned: crossplane
+    Backup: "enabled"

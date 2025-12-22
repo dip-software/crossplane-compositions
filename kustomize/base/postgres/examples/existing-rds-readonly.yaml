@@ -1,0 +1,21 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: analytics-readonly-db
+  namespace: analytics
+spec:
+  
+  # Database configuration - read-only access to production database
+  parameters:
+    existingIdentifier: production-main-db
+    type: rds-instance
+    engine: postgres
+    databaseName: production
+    port: 5432
+  
+  # Tags for IAM resources
+  tags:
+    Application: analytics
+    Environment: production
+    Team: data-analytics
+    AccessLevel: readonly

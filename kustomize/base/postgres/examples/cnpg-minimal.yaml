@@ -1,0 +1,26 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-local-db
+  namespace: default
+spec:
+  writeConnectionSecretToRef:
+    name: myapp-local-db-connection
+    namespace: default
+  crossplane: 
+    compositionSelector:
+      matchLabels:
+        provider: cnpg
+  parameters:
+    # Generic sizing
+    size: small
+    
+    # Standard configuration
+    masterUsername: "postgres"
+    identifier: myapp-local
+    databaseName: app
+    engineVersion: "18.1"
+    allocatedStorage: 20
+    
+    # HA
+    multiAz: false

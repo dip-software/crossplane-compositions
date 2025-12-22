@@ -1,0 +1,18 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-minimal-db
+  namespace: default
+spec:
+  parameters:
+    identifier: myapp-minimal-db
+    engineVersion: "18.1"
+    
+    masterUsername: postgres
+    
+    size: small
+    allocatedStorage: 20
+
+  writeConnectionSecretToRef:
+    name: myapp-minimal-db-connection
+    namespace: default

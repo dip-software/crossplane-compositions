@@ -1,0 +1,29 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: restored-app-db
+  namespace: default
+spec:
+  parameters:
+    # Basic Config
+    type: rds-instance
+    size: small
+    
+    # New Identifier for the restored DB
+    identifier: restored-app-db-v1
+    
+    # Restore Configuration
+    restore:
+      # AWS Snapshot Identifier
+      sourceIdentifier: "rds:myapp-production-db-2023-10-27-05-30"
+    
+    # These create/import specific params will be ignored or used as overrides where applicable (e.g., storage)
+    allocatedStorage: 50
+    
+    # We still need to provide these for validation if they are marked as required in the schema,
+    # but the Composition will ignore them during the restore phase.
+    # However, after restore, you might need to rotate the password to match this secret.
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: db-creds
+      key: password

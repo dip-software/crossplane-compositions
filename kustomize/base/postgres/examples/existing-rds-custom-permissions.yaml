@@ -1,0 +1,22 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: custom-permissions-db
+  namespace: myapp
+spec:
+  
+  # Database configuration
+  parameters:
+    existingIdentifier: myapp-special-db
+    type: rds-instance
+    engine: postgres
+    databaseName: special_db
+    # Provide the resource ID directly for more precise IAM policy
+    resourceId: db-CUSTOMRESOURCEID123
+  
+  # Tags for IAM resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    CustomPermissions: "true"

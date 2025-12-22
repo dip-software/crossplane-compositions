@@ -1,0 +1,23 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-aurora-access
+  namespace: myapp
+spec:
+  
+  # Database configuration - using existing Aurora PostgreSQL cluster
+  parameters:
+    existingIdentifier: myapp-aurora-cluster
+    type: aurora-cluster
+    engine: postgres
+    databaseName: application
+    port: 5432
+  
+
+  
+  # Tags for IAM resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    DatabaseType: aurora-postgresql

@@ -1,0 +1,421 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: postgres-aws
+  namespace: crossplane-system
+  labels:
+    provider: aws
+spec:
+  # Reference to the XRD
+  compositeTypeRef:
+    apiVersion: dip.io/v1alpha1
+    kind: Postgres
+  
+  mode: Pipeline
+  
+  pipeline:
+  # Load environment configurations for AWS region and VPC
+  - step: load-environment-configs
+    functionRef:
+      name: function-environment-configs
+    input:
+      apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+      kind: Input
+      spec:
+        environmentConfigs:
+        - type: Reference
+          ref:
+            name: hsp-addons
+        - type: Selector
+          selector:
+            mode: Multiple
+            matchLabels:
+              - key: config
+                type: Value
+                value: dip-software
+        - type: Selector
+          selector:
+            mode: Multiple
+            matchLabels:
+              - key: config
+                type: Value
+                value: hsp-addons
+  
+  # Render AWS resources using Go templating
+  - step: render-resources
+    functionRef:
+      name: function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          {{- $xr := .observed.composite.resource }}
+          {{- $namespace := $xr.metadata.namespace }}
+          {{- $name := $xr.metadata.name }}
+          
+          {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+          {{- $awsRegion := index $env "region" }}
+          
+          {{- /* -----------------------------------------------------------------------
+               Configuration Abstraction & Defaults
+               ----------------------------------------------------------------------- */ -}}
+          
+          {{- /* T-Shirt Sizing Map */ -}}
+          {{- $size := $xr.spec.parameters.size | default "small" }}
+          
+          {{- /* Restore Configuration */ -}}
+          {{- $restoreIdentifier := "" }}
+          {{- if $xr.spec.parameters.restore }}
+            {{- $restoreIdentifier = $xr.spec.parameters.restore.sourceIdentifier }}
+          {{- end }}
+          
+          {{- /* Determine identifier: Use existingIdentifier if set (Import/Active Manage), else identifier (Create) */ -}}
+          {{- $existingIdentifier := $xr.spec.parameters.existingIdentifier | default "" }}
+          {{- $dbIdentifier := $xr.spec.parameters.identifier | default "" }}
+          {{- $targetIdentifier := $dbIdentifier }}
+          {{- if $existingIdentifier }}
+          {{- $targetIdentifier = $existingIdentifier }}
+          {{- end }}
+          
+          {{- $dbType := $xr.spec.parameters.type | default "rds-instance" }}
+          {{- $dbEngine := $xr.spec.parameters.engine | default "postgres" }}
+          {{- $dbPort := $xr.spec.parameters.port | default 5432 }}
+          {{- $databaseName := $xr.spec.parameters.databaseName | default "" }}
+          
+          {{- /* Database Spec Variables */ -}}
+          {{- $dbEngineVersion := $xr.spec.parameters.engineVersion | default "" }}
+          {{- $dbAllocatedStorage := $xr.spec.parameters.allocatedStorage | default 20 }}
+          {{- $dbStorageType := $xr.spec.parameters.storageType | default "gp3" }}
+
+          {{- $dbMasterUsername := $xr.spec.parameters.masterUsername | default "" }}
+          
+          {{- /* Password Handling */ -}}
+          {{- $dbMasterPasswordSecretName := "" }}
+          {{- $dbMasterPasswordSecretKey := "password" }}
+          {{- $generatedPassword := "" }}
+
+          {{- if $xr.spec.parameters.masterPasswordSecretRef }}
+             {{- $dbMasterPasswordSecretName = $xr.spec.parameters.masterPasswordSecretRef.name }}
+             {{- $dbMasterPasswordSecretKey = $xr.spec.parameters.masterPasswordSecretRef.key | default "password" }}
+          {{- else }}
+             {{- $dbMasterPasswordSecretName = printf "%s-password" $name }}
+             {{- /* Check if secret already exists to preserve password */ -}}
+             {{- $observedResources := .observed.resources | default dict }}
+             {{- $existingSecret := index $observedResources "password-secret" }}
+             {{- if $existingSecret }}
+               {{- $generatedPassword = index $existingSecret.resource.data "password" | b64dec }}
+             {{- else }}
+               {{- $generatedPassword = randAlphaNum 24 }}
+             {{- end }}
+          {{- end }}
+
+          {{- $dbMasterPasswordSecret := dict "name" $dbMasterPasswordSecretName "key" $dbMasterPasswordSecretKey }}
+          {{- $dbBackupRetention := $xr.spec.parameters.backupRetentionPeriod | default 7 }}
+          {{- $dbMultiAz := $xr.spec.parameters.multiAz | default false }}
+
+          {{- $dbSkipFinalSnapshot := $xr.spec.parameters.skipFinalSnapshot | default true }}
+          {{- $deletionPolicy := $xr.spec.deletionPolicy | default "Delete" }}
+          
+          {{- /* AWS Instance Class Calculation */ -}}
+          {{- $awsInstanceClass := "db.t3.small" }}
+          {{- if eq $size "medium" }}
+            {{- $awsInstanceClass = "db.t3.medium" }}
+          {{- else if eq $size "large" }}
+            {{- $awsInstanceClass = "db.m5.large" }}
+          {{- end }}
+
+          {{- /* -----------------------------------------------------------------------
+               AWS Implementation
+               ----------------------------------------------------------------------- */ -}}
+          
+          {{- /* Extract VPC configuration */ -}}
+          {{- $servicesVpc := index $env "servicesVpc" | default dict }}
+          {{- $securityGroups := index $servicesVpc "securityGroups" | default dict }}
+          {{- $databaseSg := index $securityGroups "database" | default dict }}
+          {{- $databaseSecurityGroupId := index $databaseSg "id" | default "" }}
+          {{- $subnetGroups := index $servicesVpc "subnetGroups" | default dict }}
+          {{- $databaseSubnetGroup := index $subnetGroups "database" | default dict }}
+          {{- $databaseSubnetGroupName := index $databaseSubnetGroup "name" | default "" }}
+          
+          {{- $tags := dict }}
+          {{- if $xr.spec.tags }}
+          {{- range $key, $value := $xr.spec.tags }}
+          {{- $_ := set $tags $key $value }}
+          {{- end }}
+          {{- end }}
+          {{- $_ := set $tags "ManagedBy" "Crossplane" }}
+          {{- $_ := set $tags "Namespace" $namespace }}
+          {{- $_ := set $tags "CompositeResource" $name }}
+          {{- $_ := set $tags "Database" $targetIdentifier }}
+          
+          {{- $providerConfigName := "default" }}
+          {{- $providerConfigKind := "ProviderConfig" }}
+          {{- if $xr.spec.providerConfigRef }}
+          {{- if $xr.spec.providerConfigRef.name }}
+          {{- $providerConfigName = $xr.spec.providerConfigRef.name }}
+          {{- end }}
+          {{- if $xr.spec.providerConfigRef.kind }}
+          {{- $providerConfigKind = $xr.spec.providerConfigRef.kind }}
+          {{- end }}
+          {{- end }}
+          
+
+
+          {{- /* Password Secret - Always created (stub if user provided) */ -}}
+          {{- $pwSecretName := printf "%s-password" $name }}
+          {{- if $xr.spec.parameters.masterPasswordSecretRef }}
+             {{- $pwSecretName = printf "%s-password-stub" $name }}
+          {{- end }}
+
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $pwSecretName }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: password-secret
+          type: Opaque
+          data:
+            {{- if not $xr.spec.parameters.masterPasswordSecretRef }}
+            password: {{ $generatedPassword | b64enc }}
+            {{- else }}
+            stub: {{ "true" | b64enc }}
+            {{- end }}
+
+          {{- /* Connection Secret - Always created */ -}}
+          {{- $secretName := printf "%s-connection" $name }}
+          {{- if $xr.spec.writeConnectionSecretToRef }}
+             {{- $secretName = $xr.spec.writeConnectionSecretToRef.name }}
+          {{- end }}
+
+          {{- $endpoint := "" }}
+          {{- $address := "" }}
+          {{- $resourceId := "" }}
+          {{- /* We need to inspect the status of the "database" resource to get endpoint info */ -}}
+          {{- $observedResources := .observed.resources | default dict }}
+          {{- $dbResource := index $observedResources "database" }}
+          {{- if $dbResource }}
+            {{- if eq $dbType "rds-instance" }}
+              {{- $endpoint = $dbResource.resource.status.atProvider.address | default "" }}
+              {{- $resourceId = $dbResource.resource.status.atProvider.resourceId | default "" }}
+            {{- else }}
+              {{- $endpoint = $dbResource.resource.status.atProvider.endpoint | default "" }}
+              {{- $resourceId = $dbResource.resource.status.atProvider.clusterResourceId | default "" }}
+            {{- end }}
+          {{- end }}
+          
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: {{ $secretName }}
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: connection-secret
+          type: Opaque
+          data:      
+             username: {{ $dbMasterUsername | b64enc }}
+             {{- if $generatedPassword }}
+             password: {{ $generatedPassword | b64enc }}
+             {{- else }}
+             password: {{ "derived-from-secret" | b64enc }} 
+             {{- end }}
+             port: {{ printf "%d" (int $dbPort) | b64enc }}
+             {{- if $databaseName }}
+             database: {{ $databaseName | b64enc }}
+             {{- end }}
+             {{- if $endpoint }}
+             host: {{ $endpoint | b64enc }}
+             endpoint: {{ printf "%s:%d" $endpoint (int $dbPort) | b64enc }}
+             {{- end }}
+             sslmode: {{ "require" | b64enc }}
+          
+          
+          {{- if eq $dbType "rds-instance" }}
+          ---
+          apiVersion: rds.aws.m.upbound.io/v1beta1
+          kind: Instance
+          metadata:
+            name: {{ $name }}-rds-instance
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: database
+              crossplane.io/external-name: {{ $targetIdentifier }}
+          spec:
+
+            {{- if $existingIdentifier }}
+            managementPolicies: ["Observe"]
+            {{- end }}
+            forProvider:
+              identifier: {{ $targetIdentifier }}
+              region: {{ $awsRegion }}
+              
+              {{- if $restoreIdentifier }}
+              # Restore from snapshot configuration
+              snapshotIdentifier: {{ $restoreIdentifier }}
+              {{- else }}
+              # New DB configuration (only set when NOT restoring)
+              engine: {{ $dbEngine }}
+              {{- if $dbEngineVersion }}
+              engineVersion: {{ $dbEngineVersion | quote }}
+              {{- end }}
+              {{- if $databaseName }}
+              dbName: {{ $databaseName }}
+              {{- end }}
+              username: {{ $dbMasterUsername }}
+              passwordSecretRef:
+                name: {{ $dbMasterPasswordSecret.name }}
+                key: {{ $dbMasterPasswordSecret.key | default "password" }}
+              {{- end }}
+
+              instanceClass: {{ $awsInstanceClass }}
+              allocatedStorage: {{ $dbAllocatedStorage }}
+              storageType: {{ $dbStorageType }}
+              storageEncrypted: true
+
+              port: {{ $dbPort }}
+              dbSubnetGroupName: {{ $databaseSubnetGroupName }}
+              vpcSecurityGroupIds:
+                - {{ $databaseSecurityGroupId }}
+              backupRetentionPeriod: {{ $dbBackupRetention }}
+              multiAz: {{ $dbMultiAz }}
+              publiclyAccessible: false
+              iamDatabaseAuthenticationEnabled: false
+              
+              skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
+              {{- if $tags }}
+              tags:
+                {{- range $key, $value := $tags }}
+                {{ $key }}: {{ $value | quote }}
+                {{- end }}
+              {{- end }}
+            providerConfigRef:
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
+          
+          {{- else if eq $dbType "aurora-cluster" }}
+          ---
+          apiVersion: rds.aws.m.upbound.io/v1beta1
+          kind: Cluster
+          metadata:
+            name: {{ $name }}-rds-cluster
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: database
+              crossplane.io/external-name: {{ $targetIdentifier }}
+          spec:
+
+            {{- if $existingIdentifier }}
+            managementPolicies: ["Observe"]
+            {{- end }}
+            forProvider:
+              clusterIdentifier: {{ $targetIdentifier }}
+              region: {{ $awsRegion }}
+              
+              {{- if $restoreIdentifier }}
+              # Restore from snapshot configuration
+              snapshotIdentifier: {{ $restoreIdentifier }}
+              {{- else }}
+              # New Cluster configuration
+              engine: aurora-postgresql
+              {{- if $dbEngineVersion }}
+              engineVersion: {{ $dbEngineVersion | quote }}
+              {{- end }}
+              {{- if $databaseName }}
+              databaseName: {{ $databaseName }}
+              {{- end }}
+              masterUsername: {{ $dbMasterUsername }}
+              masterPasswordSecretRef:
+                name: {{ $dbMasterPasswordSecret.name }}
+                key: {{ $dbMasterPasswordSecret.key | default "password" }}
+              {{- end }}
+
+              dbSubnetGroupName: {{ $databaseSubnetGroupName }}
+              vpcSecurityGroupIds:
+                - {{ $databaseSecurityGroupId }}
+              backupRetentionPeriod: {{ $dbBackupRetention }}
+              storageEncrypted: true
+              iamDatabaseAuthenticationEnabled: false
+              skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}
+              {{- if $tags }}
+              tags:
+                {{- range $key, $value := $tags }}
+                {{ $key }}: {{ $value | quote }}
+                {{- end }}
+              {{- end }}
+            providerConfigRef:
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
+          {{- end }} 
+  
+  # Patch status fields
+  - step: patch-and-transform
+    functionRef:
+      name: function-patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources:
+
+      - name: database
+        connectionDetails: []
+        patches:
+
+        
+        # DB Endpoint: Patch from address (Instance) or endpoint (Cluster)
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.address
+          toFieldPath: status.dbEndpoint
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.endpoint
+          toFieldPath: status.dbEndpoint
+          policy:
+            fromFieldPath: Optional
+        
+        # DB Port
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.port
+          toFieldPath: status.dbPort
+          policy:
+            fromFieldPath: Optional
+            
+        # DB Resource ID: resourceId (Instance) or clusterResourceId (Cluster)
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.resourceId
+          toFieldPath: status.dbResourceId
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.clusterResourceId
+          toFieldPath: status.dbResourceId
+          policy:
+            fromFieldPath: Optional
+
+        readinessChecks:
+        - type: MatchString
+          fieldPath: status.conditions[0].status
+          matchString: "True"
+          
+      - name: password-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
+
+      - name: connection-secret
+        readinessChecks:
+        - type: MatchString
+          fieldPath: kind
+          matchString: Secret
+          
+
+  
+  # Auto-ready function
+  - step: auto-ready
+    functionRef:
+      name: function-auto-ready

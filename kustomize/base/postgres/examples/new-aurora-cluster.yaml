@@ -1,0 +1,37 @@
+apiVersion: dip.io/v1alpha1
+kind: Postgres
+metadata:
+  name: myapp-aurora-cluster
+  namespace: myapp
+spec:
+  
+  # Database configuration - create new Aurora PostgreSQL cluster
+  parameters:
+    identifier: myapp-aurora-prod
+    type: aurora-cluster
+    engine: postgres
+    databaseName: myapp_data
+    port: 5432
+    
+    # Master credentials
+    masterUsername: postgres
+    masterPasswordSecretRef:
+      name: myapp-aurora-master-password
+      key: password
+    
+    # Backup settings
+    backupRetentionPeriod: 14
+  
+
+  
+  # Write connection details to secret
+  writeConnectionSecretToRef:
+    name: myapp-aurora-connection
+  
+  # Tags for AWS resources
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    DatabaseType: aurora-postgresql
+    Provisioned: crossplane
