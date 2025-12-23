@@ -1,6 +1,6 @@
 # Postgres Crossplane Composition
 
-This Crossplane v2 composition provides a complete solution for **PostgreSQL** databases, supporting both **AWS RDS** (with IAM Roles for Service Accounts) and **CloudNativePG** on Kubernetes. It abstracts the underlying provider details, allowing for seamless switching between cloud-managed and Kubernetes-native databases.
+This Crossplane v2 composition provides a complete solution for **PostgreSQL** databases, supporting both **AWS RDS** and **CloudNativePG** on Kubernetes. It abstracts the underlying provider details, allowing for seamless switching between cloud-managed and Kubernetes-native databases.
 
 ## Features
 
@@ -9,21 +9,11 @@ This Crossplane v2 composition provides a complete solution for **PostgreSQL** d
 - ✅ **T-Shirt Sizing**: Simple `small`, `medium`, `large` abstraction
 - ✅ **Create new AWS RDS/Aurora** instances with full configuration
 - ✅ **Deploy CloudNativePG Clusters** on Kubernetes
-- ✅ **Use existing RDS instances** or **Aurora clusters** (observe-only mode)
 - ✅ **Multi-AZ deployment** support (AWS Multi-AZ / CNPG Replicas)
 - ✅ **Automatic backups** with configurable retention
 - ✅ **Encryption at rest** enforced by default
-- ✅ **Connection secret output** with endpoint, port, and username
+- ✅ **Connection secret output** with endpoint, port, username and password
 - ✅ **Resource tagging** support
-
-
-## Architecture
-
-
-**Created and Managed Resources:**
-1. **RDS Subnet Group** - Defines subnets for the database
-2. **RDS Instance** or **Aurora Cluster** - New PostgreSQL database
-
 
 ## Prerequisites
 
@@ -31,17 +21,11 @@ This Crossplane v2 composition provides a complete solution for **PostgreSQL** d
 
 The composition requires the following Crossplane providers and functions:
 
-- `function-environment-configs` v0.4.0
-- `function-go-templating` v0.11.0
-- `function-patch-and-transform` v0.9.1
-- `function-auto-ready` v0.5.1
-- `provider-aws-rds` v2.2.0
-
-Install these using:
-
-```bash
-kubectl apply -f functions.yaml
-```
+- `function-environment-configs` v0.4.0+
+- `function-go-templating` v0.11.0+
+- `function-patch-and-transform` v0.9.1+
+- `function-auto-ready` v0.5.1+
+- `provider-aws-rds` v2.2.0+
 
 ### 2. Environment Configuration
 
@@ -63,15 +47,7 @@ data:
     oidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
 ```
 
-### 3. RDS Database Setup
-
-Your RDS instance or Aurora cluster must have:
-- Database accessible from your EKS cluster
-- Security groups configured to allow connections
-
-
 ## Usage Examples
-
 
 ### Connection Secret Schema
 
@@ -133,40 +109,15 @@ spec:
           key: sslmode
 ```
 
-
-
 ### Database Creation Prerequisites
 
 Before creating a new database, you need:
 
 1. **Environment Configuration**: An `EnvironmentConfig` resource with VPC and security group details (automatically provided by the platform)
-2. **Master Password Secret**: A Kubernetes secret containing the master password
 
 The composition automatically extracts VPC configuration from the `EnvironmentConfig`:
 - Database subnet IDs from `servicesVpc.subnetGroups.database.subnet_ids`
 - Database security group from `servicesVpc.securityGroups.database.id`
-
-#### Create Master Password Secret
-
-```bash
-# Create a strong password
-kubectl create secret generic myapp-db-master-password \
-  --from-literal=password='YourSecurePassword123!' \
-  --namespace=myapp
-
-# Or use a file
-echo -n 'YourSecurePassword123!' > password.txt
-kubectl create secret generic myapp-db-master-password \
-  --from-file=password=password.txt \
-  --namespace=myapp
-rm password.txt
-```
-
-**IMPORTANT**: In production, use secure secret management:
-- AWS Secrets Manager with External Secrets Operator
-- HashiCorp Vault
-- Sealed Secrets
-- SOPS (Secrets OPerationS)
 
 ### Example 1: Create Development Database
 
@@ -189,16 +140,10 @@ spec:
     
     # Master credentials
     masterUsername: postgres
-    masterPasswordSecretRef:
-      name: myapp-db-master-password
-      key: password
     
     # Backup and HA
     backupRetentionPeriod: 7
     multiAz: false
-
-  
-
   
   tags:
     Environment: development
@@ -216,31 +161,23 @@ metadata:
 spec:
   database:
     identifier: myapp-prod-db
-    type: rds-instance
-    engine: postgres
     engineVersion: "18.1"
     databaseName: myapp_production
     
     # Production instance
-    provider: aws
     size: large
     allocatedStorage: 100
     storageType: gp3
     
     # Master credentials
     masterUsername: postgres
-    masterPasswordSecretRef:
-      name: myapp-prod-db-master-password
-    
+  
     # Production settings
     backupRetentionPeriod: 30
     multiAz: true
 
-  
   writeConnectionSecretToRef:
     name: myapp-prod-db-connection
-  
-
   
   tags:
     Environment: production
@@ -259,23 +196,18 @@ spec:
   database:
     identifier: myapp-aurora-prod
     type: aurora-cluster
-    engine: postgres
     engineVersion: "18.1"
     databaseName: myapp_data
 
-    
     # Master credentials
     masterUsername: postgres
-    masterPasswordSecretRef:
-      name: myapp-aurora-master-password
-    
+ 
     # Backup settings
     backupRetentionPeriod: 14
   
   writeConnectionSecretToRef:
     name: myapp-aurora-connection
   
-
 ```
 
 ### Configuration Options
@@ -415,12 +347,10 @@ spec:
 ### For All Databases
 
 1. **Least Privilege**: Create database users with only necessary permissions
-2. **Read-Only Users**: Use separate IAM users for read-only access
-3. **Network Security**: Use security groups to restrict database access
-4. **SSL/TLS**: Always use `sslmode=require` in connections
-5. **Token Rotation**: Generate fresh tokens for each connection
-6. **Audit Logging**: Enable RDS audit logging for compliance
-7. **Resource Tags**: Use tags for cost tracking and access control
+2. **Network Security**: Use security groups to restrict database access
+3. **SSL/TLS**: Always use `sslmode=require` in connections
+4. **Audit Logging**: Enable RDS audit logging for compliance
+5. **Resource Tags**: Use tags for cost tracking and access control
 
 ### For Created Databases (using `identifier`)
 
