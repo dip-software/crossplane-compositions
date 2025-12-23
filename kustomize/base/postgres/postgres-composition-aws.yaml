@@ -146,7 +146,7 @@ spec:
           {{- $_ := set $tags "Database" $targetIdentifier }}
           
           {{- $providerConfigName := "default" }}
-          {{- $providerConfigKind := "ProviderConfig" }}
+          {{- $providerConfigKind := "ClusterProviderConfig" }}
           {{- if $xr.spec.providerConfigRef }}
           {{- if $xr.spec.providerConfigRef.name }}
           {{- $providerConfigName = $xr.spec.providerConfigRef.name }}
