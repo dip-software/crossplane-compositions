@@ -167,19 +167,6 @@ spec:
                     type: string
                     description: "Kind of the ProviderConfig (e.g., ClusterProviderConfig, ProviderConfig)"
                     default: "ClusterProviderConfig"
-              
-              # Optional: Skip Final Snapshot
-              skipFinalSnapshot:
-                type: boolean
-                default: true
-                description: "Skip taking a final snapshot before deletion (default: true). Set to false for production to ensure data safety."
-              
-              # Optional: Deletion Policy
-              deletionPolicy:
-                type: string
-                enum: ["Delete", "Orphan"]
-                default: "Delete"
-                description: "Controls whether the physical AWS resource is deleted when the Crossplane resource is deleted. Default: Delete."
 
             required:
             - parameters

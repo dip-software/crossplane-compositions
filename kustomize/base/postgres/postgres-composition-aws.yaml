@@ -110,7 +110,6 @@ spec:
           {{- $dbMultiAz := $xr.spec.parameters.multiAz | default false }}
 
           {{- $dbSkipFinalSnapshot := $xr.spec.parameters.skipFinalSnapshot | default true }}
-          {{- $deletionPolicy := $xr.spec.deletionPolicy | default "Delete" }}
           
           {{- /* AWS Instance Class Calculation */ -}}
           {{- $awsInstanceClass := "db.t3.small" }}
