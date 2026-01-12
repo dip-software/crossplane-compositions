@@ -9,7 +9,7 @@ spec:
   parameters:
     identifier: myapp-aurora-prod
     type: aurora-cluster
-    engine: postgres
+    engineVersion: "18.1"
     databaseName: myapp_data
     port: 5432
     

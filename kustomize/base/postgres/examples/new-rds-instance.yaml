@@ -9,7 +9,7 @@ spec:
   parameters:
     identifier: myapp-development-db
     type: rds-instance
-    engine: postgres
+    engineVersion: "18.1"
     databaseName: myapp_dev
     port: 5432
     
@@ -26,6 +26,10 @@ spec:
     # Backup and HA
     backupRetentionPeriod: 7
     multiAz: false
+  
+  # Write connection details to secret
+  writeConnectionSecretToRef:
+    name: myapp-new-db-connection
   
   # Tags for AWS resources
   tags:

@@ -65,13 +65,6 @@ spec:
                     default: "rds-instance"
                     description: "Database type: rds-instance for RDS PostgreSQL instances, aurora-cluster for Aurora PostgreSQL clusters. Ignored if provider is cnpg."
                   
-                  # Database engine (postgres)
-                  engine:
-                    type: string
-                    enum: ["postgres"]
-                    default: "postgres"
-                    description: "Database engine type (currently only postgres is supported)"
-                  
                   # Engine version
                   engineVersion:
                     type: string

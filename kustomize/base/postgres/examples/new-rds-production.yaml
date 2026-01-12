@@ -9,7 +9,6 @@ spec:
   parameters:
     identifier: myapp-prod-db
     type: rds-instance
-    engine: postgres
     engineVersion: "18.1"
     databaseName: myapp_production
     port: 5432

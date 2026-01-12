@@ -75,7 +75,6 @@ spec:
           {{- $targetIdentifier := $xr.spec.parameters.identifier | default "" }}
           
           {{- $dbType := $xr.spec.parameters.type | default "rds-instance" }}
-          {{- $dbEngine := $xr.spec.parameters.engine | default "postgres" }}
           {{- $dbPort := $xr.spec.parameters.port | default 5432 }}
           {{- $databaseName := $xr.spec.parameters.databaseName | default "" }}
           
@@ -250,7 +249,7 @@ spec:
               snapshotIdentifier: {{ $restoreIdentifier }}
               {{- else }}
               # New DB configuration (only set when NOT restoring)
-              engine: {{ $dbEngine }}
+              engine: postgres
               {{- if $dbEngineVersion }}
               engineVersion: {{ $dbEngineVersion | quote }}
               {{- end }}

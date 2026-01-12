@@ -27,3 +27,6 @@ spec:
     masterPasswordSecretRef:
       name: db-creds
       key: password
+
+  writeConnectionSecretToRef:
+    name: restored-app-db-connection
