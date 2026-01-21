@@ -45,6 +45,8 @@ spec:
           {{- $dbStorageType := $xr.spec.parameters.storageType | default "gp3" }}
           {{- $dbMultiAz := $xr.spec.parameters.multiAz | default false }}
           {{- $databaseName := $xr.spec.parameters.databaseName | default "" }}
+          {{- $enableSnapshots := $xr.spec.parameters.enableSnapshots | default false }}
+          {{- $snapshotClassName := $xr.spec.parameters.snapshotClassName | default "default" }}
 
 
           {{- $dbMasterUsername := $xr.spec.parameters.masterUsername | default "" }}
@@ -151,6 +153,12 @@ spec:
               limits:
                 memory: {{ $cnpgMemLim }}
                 cpu: {{ $cnpgCpuLim }}
+
+             {{- if $enableSnapshots }}
+             backup:
+              volumeSnapshot:
+                className: {{ $snapshotClassName }}
+             {{- end }}
           
           {{- /* Password Secret - Always created (stub if user provided) */ -}}
           {{- $pwSecretName := printf "%s-password" $name }}
@@ -218,6 +226,23 @@ spec:
             {{- if $generatedPassword }}
             password: {{ $generatedPassword | b64enc }}
             {{- end }}
+
+          {{- if $enableSnapshots }}
+          ---
+          apiVersion: postgresql.cnpg.io/v1
+          kind: ScheduledBackup
+          metadata:
+            name: {{ $name }}-scheduled-backup
+            namespace: {{ $namespace }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: scheduled-backup
+          spec:
+            schedule: "0 0 0 * * *"
+            method: volumeSnapshot
+            backupOwnerReference: self
+            cluster:
+              name: {{ $targetIdentifier }}
+          {{- end }}
   
   # Patch status fields
   - step: patch-and-transform

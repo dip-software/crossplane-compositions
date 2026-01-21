@@ -110,6 +110,13 @@ spec:
           {{- $dbMultiAz := $xr.spec.parameters.multiAz | default false }}
 
           {{- $dbSkipFinalSnapshot := $xr.spec.parameters.skipFinalSnapshot | default true }}
+          {{- $enableSnapshots := $xr.spec.parameters.enableSnapshots | default false }}
+
+          {{- /* Backup Window Configuration */ -}}
+          {{- $preferredBackupWindow := "" }}
+          {{- if $enableSnapshots }}
+             {{- $preferredBackupWindow = "00:00-01:00" }}
+          {{- end }}
           
           {{- /* AWS Instance Class Calculation */ -}}
           {{- $awsInstanceClass := "db.t3.small" }}
@@ -271,6 +278,9 @@ spec:
               vpcSecurityGroupIds:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
+              {{- if $preferredBackupWindow }}
+              preferredBackupWindow: {{ $preferredBackupWindow }}
+              {{- end }}
               multiAz: {{ $dbMultiAz }}
               publiclyAccessible: false
               iamDatabaseAuthenticationEnabled: false
@@ -324,6 +334,9 @@ spec:
               vpcSecurityGroupIds:
                 - {{ $databaseSecurityGroupId }}
               backupRetentionPeriod: {{ $dbBackupRetention }}
+              {{- if $preferredBackupWindow }}
+              preferredBackupWindow: {{ $preferredBackupWindow }}
+              {{- end }}
               storageEncrypted: true
               iamDatabaseAuthenticationEnabled: false
               skipFinalSnapshot: {{ $dbSkipFinalSnapshot }}

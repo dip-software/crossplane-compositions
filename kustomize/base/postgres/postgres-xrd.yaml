@@ -144,6 +144,17 @@ spec:
                         description: "The identifier of the source to restore from. AWS: DB Snapshot Identifier. CNPG: Backup Object Name."
                     required:
                     - sourceIdentifier
+                  
+                  # Snapshot configuration
+                  enableSnapshots:
+                    type: boolean
+                    default: false
+                    description: "Enable scheduled snapshots/backups daily at 12am."
+                  
+                  snapshotClassName:
+                    type: string
+                    default: "default"
+                    description: "VolumeSnapshotClass to use for snapshots (CNPG only)."
                 
                 required:
                 - masterUsername
