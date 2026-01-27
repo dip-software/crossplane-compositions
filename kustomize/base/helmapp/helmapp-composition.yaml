@@ -92,27 +92,26 @@ spec:
               {{- end }}
               helm:
                 releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName }}
-                {{- if .observed.composite.resource.spec.source.helm.valuesObject }}
-                {{- $valuesJson := toJson .observed.composite.resource.spec.source.helm.valuesObject }}
-                {{- $env := dict }}
-                {{- if (index .context "apiextensions.crossplane.io/environment") }}
-                {{- $env = index .context "apiextensions.crossplane.io/environment" }}
-                {{- end }}
-                {{- $processedJson := $valuesJson }}
-                {{- range $varName := $supportedEnvVars }}
-                {{- if (index $env $varName) }}
-                {{- $pattern := printf "${%s}" $varName }}
-                {{- $replacement := index $env $varName | toString }}
-                {{- $processedJson = $processedJson | replace $pattern $replacement }}
-                {{- end }}
-                {{- end }}
+                {{- $userValues := .observed.composite.resource.spec.source.helm.valuesObject }}
+                {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+                {{- if or $userValues $env }}
                 valuesObject:
-                {{- range $key, $value := ($processedJson | fromJson) }}
+                  {{- if $userValues }}
+                  {{- $valuesJson := toJson $userValues }}
+                  {{- $subEnv := default dict $env }}
+                  {{- $processedJson := $valuesJson }}
+                  {{- range $varName := $supportedEnvVars }}
+                  {{- if (index $subEnv $varName) }}
+                  {{- $pattern := printf "${%s}" $varName }}
+                  {{- $replacement := index $subEnv $varName | toString }}
+                  {{- $processedJson = $processedJson | replace $pattern $replacement }}
+                  {{- end }}
+                  {{- end }}
+                  {{- range $key, $value := ($processedJson | fromJson) }}
                   {{ $key }}: {{ toJson $value }}
-                {{- end }}
-                {{- end }}
-                  {{- if (index .context "apiextensions.crossplane.io/environment") }}
-                  {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+                  {{- end }}
+                  {{- end }}
+                  {{- if $env }}
                   {{- $filterKeys := .observed.composite.resource.spec.source.withConfigKeys }}
                   environmentConfig:
                     {{- if $filterKeys }}
@@ -208,6 +207,7 @@ spec:
                     {{- end }}
                     {{- end }}
                   {{- end }}
+                {{- end }}
             destination:
               server: https://kubernetes.default.svc
               namespace: {{ if .observed.composite.resource.spec.destination }}{{ default .observed.composite.resource.metadata.namespace .observed.composite.resource.spec.destination.namespace }}{{ else }}{{ .observed.composite.resource.metadata.namespace }}{{ end }}
