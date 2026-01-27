@@ -261,11 +261,12 @@ spec:
               {{- if $databaseName }}
               dbName: {{ $databaseName }}
               {{- end }}
+              {{- end }}
+
               username: {{ $dbMasterUsername }}
               passwordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
-              {{- end }}
 
               instanceClass: {{ $awsInstanceClass }}
               allocatedStorage: {{ $dbAllocatedStorage }}
@@ -322,11 +323,12 @@ spec:
               {{- if $databaseName }}
               databaseName: {{ $databaseName }}
               {{- end }}
+              {{- end }}
+
               masterUsername: {{ $dbMasterUsername }}
               masterPasswordSecretRef:
                 name: {{ $dbMasterPasswordSecret.name }}
                 key: {{ $dbMasterPasswordSecret.key | default "password" }}
-              {{- end }}
 
               dbSubnetGroupName: {{ $databaseSubnetGroupName }}
               vpcSecurityGroupIds:
