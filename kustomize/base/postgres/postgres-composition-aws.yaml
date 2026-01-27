@@ -243,7 +243,6 @@ spec:
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: database
-              crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
 
             forProvider:
@@ -305,7 +304,6 @@ spec:
             namespace: {{ $namespace }}
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: database
-              crossplane.io/external-name: {{ $targetIdentifier }}
           spec:
 
             forProvider:
