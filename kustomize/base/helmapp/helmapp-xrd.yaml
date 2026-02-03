@@ -78,6 +78,12 @@ spec:
                 description: "ArgoCD project name (defaults to 'default')"
                 default: "default"
               
+              # Revision history limit
+              revisionHistoryLimit:
+                type: integer
+                description: "Limits the number of items kept in the application's revision history (default 10)"
+                format: int64
+              
               # ArgoCD destination configuration
               destination:
                 type: object

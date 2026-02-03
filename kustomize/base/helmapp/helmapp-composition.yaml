@@ -81,6 +81,9 @@ spec:
             - resources-finalizer.argocd.argoproj.io
           spec:
             project: {{ default "default" .observed.composite.resource.spec.project }}
+            {{- if .observed.composite.resource.spec.revisionHistoryLimit }}
+            revisionHistoryLimit: {{ .observed.composite.resource.spec.revisionHistoryLimit }}
+            {{- end }}
             source:
               repoURL: {{ .observed.composite.resource.spec.source.repoURL }}
               targetRevision: {{ .observed.composite.resource.spec.source.targetRevision }}
