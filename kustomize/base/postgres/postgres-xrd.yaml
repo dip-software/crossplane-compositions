@@ -85,8 +85,8 @@ spec:
                   # Allocated storage in GB
                   allocatedStorage:
                     type: integer
-                    description: "Allocated storage in GB (minimum 20 for PostgreSQL)."
-                    minimum: 20
+                    description: "Allocated storage in GB (minimum 20 for AWS, minimum 5 for CNPG)."
+                    minimum: 5
                   
                   # Storage type
                   storageType:

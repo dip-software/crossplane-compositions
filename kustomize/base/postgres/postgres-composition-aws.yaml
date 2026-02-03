@@ -12,6 +12,11 @@ spec:
     kind: Postgres
   
   mode: Pipeline
+
+  # Validate AWS-specific constraints
+  inputValidation:
+    - rule: "self.spec.parameters.allocatedStorage >= 20 || !has(self.spec.parameters.allocatedStorage)"
+      message: "allocatedStorage must be at least 20 GB for AWS RDS/Aurora"
   
   pipeline:
   # Load environment configurations for AWS region and VPC
