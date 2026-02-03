@@ -12,11 +12,6 @@ spec:
     kind: Postgres
   
   mode: Pipeline
-
-  # Validate AWS-specific constraints
-  inputValidation:
-    - rule: "self.spec.parameters.allocatedStorage >= 20 || !has(self.spec.parameters.allocatedStorage)"
-      message: "allocatedStorage must be at least 20 GB for AWS RDS/Aurora"
   
   pipeline:
   # Load environment configurations for AWS region and VPC
@@ -59,6 +54,13 @@ spec:
           {{- $xr := .observed.composite.resource }}
           {{- $namespace := $xr.metadata.namespace }}
           {{- $name := $xr.metadata.name }}
+          
+          {{- /* Validate allocatedStorage minimum for AWS */ -}}
+          {{- if $xr.spec.parameters.allocatedStorage }}
+            {{- if lt (int $xr.spec.parameters.allocatedStorage) 20 }}
+              {{- fail "allocatedStorage must be at least 20 GB for AWS RDS/Aurora" }}
+            {{- end }}
+          {{- end }}
           
           {{- $env := index .context "apiextensions.crossplane.io/environment" }}
           {{- $awsRegion := index $env "region" }}
