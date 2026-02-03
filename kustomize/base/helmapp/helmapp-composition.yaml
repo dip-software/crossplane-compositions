@@ -84,6 +84,39 @@ spec:
             {{- if .observed.composite.resource.spec.revisionHistoryLimit }}
             revisionHistoryLimit: {{ .observed.composite.resource.spec.revisionHistoryLimit }}
             {{- end }}
+            {{- if .observed.composite.resource.spec.ignoreDifferences }}
+            ignoreDifferences:
+            {{- range .observed.composite.resource.spec.ignoreDifferences }}
+            - kind: {{ .kind }}
+              {{- if .group }}
+              group: {{ .group | quote }}
+              {{- end }}
+              {{- if .name }}
+              name: {{ .name }}
+              {{- end }}
+              {{- if .namespace }}
+              namespace: {{ .namespace }}
+              {{- end }}
+              {{- if .jsonPointers }}
+              jsonPointers:
+              {{- range .jsonPointers }}
+              - {{ . }}
+              {{- end }}
+              {{- end }}
+              {{- if .jqPathExpressions }}
+              jqPathExpressions:
+              {{- range .jqPathExpressions }}
+              - {{ . | quote }}
+              {{- end }}
+              {{- end }}
+              {{- if .managedFieldsManagers }}
+              managedFieldsManagers:
+              {{- range .managedFieldsManagers }}
+              - {{ . }}
+              {{- end }}
+              {{- end }}
+            {{- end }}
+            {{- end }}
             source:
               repoURL: {{ .observed.composite.resource.spec.source.repoURL }}
               targetRevision: {{ .observed.composite.resource.spec.source.targetRevision }}

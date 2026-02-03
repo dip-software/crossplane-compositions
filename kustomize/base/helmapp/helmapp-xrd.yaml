@@ -84,6 +84,43 @@ spec:
                 description: "Limits the number of items kept in the application's revision history (default 10)"
                 format: int64
               
+              # Ignore differences configuration
+              ignoreDifferences:
+                type: array
+                description: "Ignore differences between live and desired states during the diff"
+                items:
+                  type: object
+                  properties:
+                    group:
+                      type: string
+                      description: "API group of the resource (use '*' for all groups)"
+                    kind:
+                      type: string
+                      description: "Kind of the resource (use '*' for all kinds)"
+                    name:
+                      type: string
+                      description: "Name of the resource (optional, must match exactly)"
+                    namespace:
+                      type: string
+                      description: "Namespace of the resource (optional, must match exactly)"
+                    jsonPointers:
+                      type: array
+                      description: "JSON pointers to ignore (e.g., /spec/replicas)"
+                      items:
+                        type: string
+                    jqPathExpressions:
+                      type: array
+                      description: "JQ path expressions to ignore"
+                      items:
+                        type: string
+                    managedFieldsManagers:
+                      type: array
+                      description: "Managed fields managers to ignore"
+                      items:
+                        type: string
+                  required:
+                  - kind
+              
               # ArgoCD destination configuration
               destination:
                 type: object
