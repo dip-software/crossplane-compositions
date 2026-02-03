@@ -20,7 +20,7 @@ spec:
     identifier: myapp-local
     databaseName: app
     engineVersion: "18.1"
-    allocatedStorage: 20
+    allocatedStorage: 5
     
     # HA
     multiAz: false
