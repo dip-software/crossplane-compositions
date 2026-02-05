@@ -247,6 +247,23 @@ spec:
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
+          
+          ---
+          apiVersion: s3.aws.m.upbound.io/v1beta1
+          kind: BucketPolicy
+          metadata:
+            name: {{ $name }}-bucket-policy
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: s3-bucket-policy
+          spec:
+            forProvider:
+              region: {{ $awsRegion }}
+              bucketRef:
+                name: {{ $name }}-bucket
+              policy: {{ printf "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Sid\": \"DenyInsecureTransport\", \"Effect\": \"Deny\", \"Principal\": \"*\", \"Action\": \"s3:*\", \"Resource\": [\"arn:aws:s3:::%s\", \"arn:aws:s3:::%s/*\"], \"Condition\": {\"Bool\": {\"aws:SecureTransport\": \"false\"}}}]}" $bucketName $bucketName | quote }}
+            providerConfigRef:
+              name: {{ $providerConfigName }}
+              kind: {{ $providerConfigKind }}
           {{- end }}
           
           ---
