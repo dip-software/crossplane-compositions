@@ -1,0 +1,25 @@
+apiVersion: dip.io/v1alpha1
+kind: MySQL
+metadata:
+  name: myapp-aurora-mysql
+  namespace: myapp
+spec:
+  parameters:
+    identifier: myapp-aurora-mysql
+    type: aurora-cluster
+    engineVersion: "8.0.mysql_aurora.3.10.3"
+    databaseName: myapp_data
+    port: 3306
+    masterUsername: admin
+    masterPasswordSecretRef:
+      name: myapp-aurora-mysql-password
+      key: password
+    backupRetentionPeriod: 14
+  writeConnectionSecretToRef:
+    name: myapp-aurora-mysql-connection
+  tags:
+    Application: myapp
+    Environment: production
+    Team: platform
+    DatabaseType: aurora-mysql
+    Provisioned: crossplane

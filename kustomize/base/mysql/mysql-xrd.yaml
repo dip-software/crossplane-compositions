@@ -1,0 +1,215 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: mysql.dip.io
+spec:
+  group: dip.io
+  names:
+    kind: MySQL
+    plural: mysql
+  
+  # Namespace scope - compositions will be namespace-scoped
+  scope: Namespaced
+
+  # Default Composition
+  defaultCompositionRef:
+    name: mysql-aws
+  
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+            properties:
+              writeConnectionSecretToRef:
+                type: object
+                description: "The name of the secret to write connection details to."
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the secret."
+                  namespace:
+                    type: string
+                    description: "Namespace of the secret. If ignored, the secret is created in the same namespace as the resource."
+                required:
+                - name
+              # Database configuration
+              parameters:
+                type: object
+                properties:
+                  # T-Shirt Sizing abstraction
+                  size:
+                    type: string
+                    enum: ["small", "medium", "large"]
+                    default: "small"
+                    description: "Instance sizing abstraction. small (1vCPU/2GB), medium (2vCPU/4GB), large (4vCPU/16GB)."
+
+                  # Identifier for creating new database
+                  identifier:
+                    type: string
+                    description: "Name for the new RDS instance or Aurora cluster to create (e.g., 'myapp-development-db'). Use this when provisioning a new database."
+                  
+                  # Database type (rds-instance or aurora-cluster)
+                  type:
+                    type: string
+                    enum: ["rds-instance", "aurora-cluster"]
+                    default: "rds-instance"
+                    description: "Database type: rds-instance for RDS MySQL instances, aurora-cluster for Aurora MySQL clusters."
+                  
+                  # Engine version
+                  engineVersion:
+                    type: string
+                    description: "MySQL engine version (e.g., '8.0.36', '5.7.44')."
+                    pattern: '^[0-9]+(\.[0-9]+){1,2}$'
+                  
+                  # Database name
+                  databaseName:
+                    type: string
+                    description: "Database name for application connections."
+                  
+                  # Port
+                  port:
+                    type: integer
+                    default: 3306
+                    description: "Database port (defaults to 3306 for MySQL)"
+                       
+                  # Allocated storage in GB
+                  allocatedStorage:
+                    type: integer
+                    description: "Allocated storage in GB (minimum 20 for AWS)."
+                    minimum: 20
+                  
+                  # Storage type
+                  storageType:
+                    type: string
+                    enum: ["gp2", "gp3", "io1"]
+                    default: "gp3"
+                    description: "Storage type (AWS specific)."
+                  
+                  # Master username
+                  masterUsername:
+                    type: string
+                    description: "Master username for the database."
+                    pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
+                    maxLength: 63
+                  
+                  # Master password secret reference
+                  masterPasswordSecretRef:
+                    type: object
+                    description: "Reference to a Kubernetes secret containing the master password."
+                    properties:
+                      name:
+                        type: string
+                        description: "Name of the secret"
+                      namespace:
+                        type: string
+                        description: "Namespace of the secret (defaults to same namespace as MySQL resource)"
+                      key:
+                        type: string
+                        default: "password"
+                        description: "Key in the secret containing the password"
+                    required:
+                    - name
+                  
+                  # Backup configuration
+                  backupRetentionPeriod:
+                    type: integer
+                    default: 7
+                    description: "Number of days to retain automated backups (0-35). Default: 7 days"
+                    minimum: 0
+                    maximum: 35
+                  
+                  # Multi-AZ deployment
+                  multiAz:
+                    type: boolean
+                    default: false
+                    description: "Enable High Availability (Multi-AZ for AWS)"
+                  
+                  # Restore configuration
+                  restore:
+                    type: object
+                    description: "Configuration for bootstrapping the database from a snapshot (AWS)."
+                    properties:
+                      sourceIdentifier:
+                        type: string
+                        description: "The identifier of the snapshot to restore from."
+                    required:
+                    - sourceIdentifier
+
+                  # Snapshot configuration
+                  enableSnapshots:
+                    type: boolean
+                    default: false
+                    description: "Enable a preferred backup window for automated snapshots (AWS only)."
+
+                  # Skip final snapshot on deletion
+                  skipFinalSnapshot:
+                    type: boolean
+                    default: true
+                    description: "Skip final snapshot when deleting the database (AWS only)."
+                
+                required:
+                - masterUsername
+              
+              # Optional: Tags for created resources
+              tags:
+                type: object
+                description: "Tags to apply to AWS resources"
+                x-kubernetes-preserve-unknown-fields: true
+              
+              # Optional: Provider configuration override
+              providerConfigRef:
+                type: object
+                description: "Optional: Override the default provider config reference"
+                properties:
+                  name:
+                    type: string
+                    description: "Name of the ProviderConfig"
+                    default: "default"
+                  kind:
+                    type: string
+                    description: "Kind of the ProviderConfig (e.g., ClusterProviderConfig, ProviderConfig)"
+                    default: "ClusterProviderConfig"
+
+            required:
+            - parameters
+          
+          status:
+            type: object
+            properties:
+              dbInstanceIdentifier:
+                type: string
+                description: "RDS instance or Aurora cluster identifier"
+              dbResourceId:
+                type: string
+                description: "RDS resource ID"
+              dbEndpoint:
+                type: string
+                description: "Database endpoint hostname"
+              dbPort:
+                type: integer
+                description: "Database port"
+              databaseName:
+                type: string
+                description: "Database name"
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string
