@@ -1,0 +1,24 @@
+apiVersion: dip.io/v1alpha1
+kind: MySQL
+metadata:
+  name: myapp-new-mysql
+  namespace: myapp
+spec:
+  parameters:
+    identifier: myapp-development-mysql
+    type: rds-instance
+    engineVersion: "8.4.7"
+    databaseName: myapp_dev
+    port: 3306
+    allocatedStorage: 20
+    storageType: gp3
+    masterUsername: admin
+    backupRetentionPeriod: 7
+    multiAz: false
+  writeConnectionSecretToRef:
+    name: myapp-mysql-connection
+  tags:
+    Application: myapp
+    Environment: development
+    Team: platform
+    Provisioned: crossplane

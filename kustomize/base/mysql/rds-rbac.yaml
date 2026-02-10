@@ -1,0 +1,18 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rds:aggregate-to-crossplane
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
+rules:
+- apiGroups:
+  - rds.aws.m.upbound.io
+  resources:
+  - instances
+  - instances/status
+  - clusters
+  - clusters/status
+  - dbsubnetgroups
+  - dbsubnetgroups/status
+  verbs:
+  - "*"
