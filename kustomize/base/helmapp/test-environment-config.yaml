@@ -17,3 +17,5 @@ data:
   eks:
     clusterName: "test-cluster"
     oidcIssuer: "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+    oidcProvider: "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+    oidcProviderArn: "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
