@@ -14,6 +14,7 @@ This Crossplane v2 composition provides a complete solution for setting up **AWS
   - Optional custom KMS key support for specific compliance requirements
 - ✅ **S3 bucket versioning** (optional)
 - ✅ **Public access blocking** (automatically enabled)
+- ✅ **Public folder access** (optional per-folder public read via bucket policy)
 - ✅ **Resource tagging** support
 
 ## Architecture
@@ -23,8 +24,9 @@ The composition creates/configures the following resources:
 ### When creating a new bucket:
 1. **S3 Bucket** - With configurable name, versioning, and encryption
 2. **S3 Bucket Encryption** - Uses AES256 (AWS managed key) or custom KMS key
-3. **S3 Bucket Public Access Block** - Blocks all public access
-4. **S3 Bucket Versioning** - Optional versioning support
+3. **S3 Bucket Public Access Block** - Blocks all public access (relaxed when `publicFolders` is configured)
+4. **S3 Bucket Policy** - Denies insecure transport; optionally grants public read access to specified folder prefixes
+5. **S3 Bucket Versioning** - Optional versioning support
 
 ### Always created:
 5. **IAM Role** - With IRSA trust policy for the specified ServiceAccount
@@ -151,6 +153,35 @@ spec:
     allowWrite: false
 ```
 
+### Example 5: Bucket with Public Folders
+
+```yaml
+apiVersion: dip.io/v1alpha1
+kind: S3IRSA
+metadata:
+  name: my-app-public-assets
+  namespace: my-app
+spec:
+  serviceAccount:
+    name: my-app-sa
+  parameters:
+    name: my-app-assets-bucket
+    versioning: true
+    encryption:
+      enabled: true
+    publicFolders:
+      - public/images
+      - public/downloads
+  permissions:
+    allowRead: true
+    allowWrite: true
+  tags:
+    Application: my-app
+    Environment: production
+```
+
+This creates a bucket where objects under `public/images/*` and `public/downloads/*` are publicly readable via `s3:GetObject`. The public access block is automatically relaxed (`blockPublicPolicy` and `restrictPublicBuckets` set to `false`) to allow the bucket policy. All other folders remain private.
+
 ## Creating and Using the ServiceAccount
 
 After creating the S3IRSA resource, you need to create a ServiceAccount with the IAM role annotation. First, get the role ARN from the S3IRSA status:
@@ -210,6 +241,7 @@ The AWS SDK will automatically use the IRSA credentials from the ServiceAccount.
 | `parameters.versioning` | boolean | false | Enable S3 bucket versioning |
 | `parameters.encryption.enabled` | boolean | true | Enable bucket encryption |
 | `parameters.encryption.existingKmsKeyId` | string | - | Custom KMS key ARN (uses AWS managed key if not specified) |
+| `parameters.publicFolders` | array | [] | List of folder prefixes to make publicly readable (e.g. `public/images`). Adds a bucket policy statement granting `s3:GetObject` to `*` and relaxes the public access block accordingly. |
 | `permissions.allowRead` | boolean | true | Allow read operations (GetObject, ListBucket) |
 | `permissions.allowWrite` | boolean | true | Allow write operations (PutObject, DeleteObject) |
 | `permissions.additionalActions` | array | [] | Additional S3 actions to grant |
@@ -275,7 +307,8 @@ make render
 
 ## Security Considerations
 
-- Public access to buckets is automatically blocked
+- Public access to buckets is automatically blocked unless `publicFolders` is configured
+- When `publicFolders` is set, only `s3:GetObject` is granted to the specified prefixes; all other paths remain private
 - IAM policies follow the principle of least privilege
 - ServiceAccount is scoped to a specific namespace
 - KMS encryption is enabled by default

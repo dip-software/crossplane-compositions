@@ -1,0 +1,39 @@
+apiVersion: dip.io/v1alpha1
+kind: S3IRSA
+metadata:
+  name: my-app-public-assets
+  namespace: my-app
+spec:
+  # ServiceAccount configuration for IRSA binding
+  serviceAccount:
+    name: my-app-sa
+
+  # Create a new S3 bucket with public folders
+  parameters:
+    name: my-app-assets-bucket
+
+    # Enable versioning
+    versioning: true
+
+    # Encryption configuration
+    encryption:
+      enabled: true
+
+    # Folder prefixes that will be publicly readable (s3:GetObject)
+    # A bucket policy will be created granting anonymous read access to
+    # objects under these prefixes. The public access block is relaxed
+    # accordingly (blockPublicPolicy and restrictPublicBuckets are set
+    # to false).
+    publicFolders:
+      - public/images
+      - public/downloads
+
+  # IAM permissions for the service account
+  permissions:
+    allowRead: true
+    allowWrite: true
+
+  # Tags for AWS resources
+  tags:
+    Application: my-app
+    Environment: production

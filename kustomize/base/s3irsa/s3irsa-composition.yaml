@@ -97,6 +97,12 @@ spec:
           {{- end }}
           {{- end }}
           
+          {{- $publicFolders := list }}
+          {{- if and $xr.spec.parameters $xr.spec.parameters.publicFolders }}
+          {{- $publicFolders = $xr.spec.parameters.publicFolders }}
+          {{- end }}
+          {{- $hasPublicFolders := gt (len $publicFolders) 0 }}
+
           {{- $allowRead := true }}
           {{- $allowWrite := true }}
           {{- if $xr.spec.permissions }}
@@ -194,7 +200,7 @@ spec:
               bucketRef:
                 name: {{ $name }}-bucket
               versioningConfiguration:
-                - status: Enabled
+                status: Enabled
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
@@ -241,9 +247,17 @@ spec:
               bucketRef:
                 name: {{ $name }}-bucket
               blockPublicAcls: true
+              {{- if $hasPublicFolders }}
+              blockPublicPolicy: false
+              {{- else }}
               blockPublicPolicy: true
+              {{- end }}
               ignorePublicAcls: true
+              {{- if $hasPublicFolders }}
+              restrictPublicBuckets: false
+              {{- else }}
               restrictPublicBuckets: true
+              {{- end }}
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}
@@ -260,7 +274,41 @@ spec:
               region: {{ $awsRegion }}
               bucketRef:
                 name: {{ $name }}-bucket
-              policy: {{ printf "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Sid\": \"DenyInsecureTransport\", \"Effect\": \"Deny\", \"Principal\": \"*\", \"Action\": \"s3:*\", \"Resource\": [\"arn:aws:s3:::%s\", \"arn:aws:s3:::%s/*\"], \"Condition\": {\"Bool\": {\"aws:SecureTransport\": \"false\"}}}]}" $bucketName $bucketName | quote }}
+              policy: |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Sid": "DenyInsecureTransport",
+                      "Effect": "Deny",
+                      "Principal": "*",
+                      "Action": "s3:*",
+                      "Resource": [
+                        "arn:aws:s3:::{{ $bucketName }}",
+                        "arn:aws:s3:::{{ $bucketName }}/*"
+                      ],
+                      "Condition": {
+                        "Bool": {
+                          "aws:SecureTransport": "false"
+                        }
+                      }
+                    }
+                    {{- if $hasPublicFolders }}
+                    ,{
+                      "Sid": "AllowPublicAccessToFolders",
+                      "Effect": "Allow",
+                      "Principal": "*",
+                      "Action": "s3:GetObject",
+                      "Resource": [
+                        {{- range $i, $folder := $publicFolders }}
+                        {{- if $i }},{{ end }}
+                        "arn:aws:s3:::{{ $bucketName }}/{{ $folder }}/*"
+                        {{- end }}
+                      ]
+                    }
+                    {{- end }}
+                  ]
+                }
             providerConfigRef:
               name: {{ $providerConfigName }}
               kind: {{ $providerConfigKind }}

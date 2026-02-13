@@ -70,6 +70,13 @@ spec:
                       existingKmsKeyId:
                         type: string
                         description: "Optional: ARN or ID of existing KMS key. If not provided, AWS managed key (aws/s3) will be used for efficiency."
+                  
+                  # Public folder access configuration
+                  publicFolders:
+                    type: array
+                    description: "List of folder prefixes to make publicly readable via a bucket policy. Each entry is a folder path (e.g. 'public/images'). This will relax the public access block to allow the bucket policy."
+                    items:
+                      type: string
               
               # IAM permissions configuration
               permissions:
