@@ -1,0 +1,26 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: app-with-user-envconfig
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/loafoe/helm-charts/go-hello-world"
+    path: .
+    targetRevision: "0.15.0"
+    helm:
+      valuesObject:
+        replicaCount: 2
+        serviceType: "LoadBalancer"
+        # User-provided environmentConfig that should be MERGED with injected values
+        # User values should take precedence (override injected values)
+        environmentConfig:
+          # Custom key that doesn't exist in injected config - should be preserved
+          customKey: "my-custom-value"
+          # Override the injected resourcePrefix - user value should win
+          resourcePrefix: "my-prefix"
+          # Variable substitution should still work in user's environmentConfig
+          customAccountId: "${accountId}"

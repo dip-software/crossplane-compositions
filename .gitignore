@@ -3,3 +3,4 @@
 
 # Crossplane cache
 .crossplane/
+.claude/

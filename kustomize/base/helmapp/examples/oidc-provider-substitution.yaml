@@ -1,0 +1,26 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: test-oidc-vars
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: "default"
+  source:
+    repoURL: "oci://ghcr.io/example/test-chart"
+    targetRevision: "1.0.0"
+    helm:
+      valuesObject:
+        # Test oidcProviderArn substitution
+        serviceAccount:
+          annotations:
+            eks.amazonaws.com/role-arn: "arn:${partition}:iam::${accountId}:role/${resourcePrefix}-my-role"
+        # Test oidcProvider and oidcProviderArn directly
+        oidc:
+          provider: "${oidcProvider}"
+          providerArn: "${oidcProviderArn}"
+        # Test combined usage in IAM trust policy style
+        iamTrust:
+          federated: "${oidcProviderArn}"
+          condition: "${oidcProvider}:sub"

@@ -130,6 +130,13 @@ spec:
                 releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName }}
                 {{- $userValues := .observed.composite.resource.spec.source.helm.valuesObject }}
                 {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+                {{- /* Extract user's environmentConfig for later merging */ -}}
+                {{- $userEnvConfig := dict }}
+                {{- if $userValues }}
+                {{- if $userValues.environmentConfig }}
+                {{- $userEnvConfig = $userValues.environmentConfig }}
+                {{- end }}
+                {{- end }}
                 {{- if or $userValues $env }}
                 valuesObject:
                   {{- if $userValues }}
@@ -143,8 +150,23 @@ spec:
                   {{- $processedJson = $processedJson | replace $pattern $replacement }}
                   {{- end }}
                   {{- end }}
+                  {{- /* Also process user's environmentConfig with variable substitution */ -}}
+                  {{- if $userEnvConfig }}
+                  {{- $userEnvConfigJson := toJson $userEnvConfig }}
+                  {{- range $varName := $supportedEnvVars }}
+                  {{- if (index $subEnv $varName) }}
+                  {{- $pattern := printf "${%s}" $varName }}
+                  {{- $replacement := index $subEnv $varName | toString }}
+                  {{- $userEnvConfigJson = $userEnvConfigJson | replace $pattern $replacement }}
+                  {{- end }}
+                  {{- end }}
+                  {{- $userEnvConfig = $userEnvConfigJson | fromJson }}
+                  {{- end }}
+                  {{- /* Output all user values EXCEPT environmentConfig (will be merged later) */ -}}
                   {{- range $key, $value := ($processedJson | fromJson) }}
+                  {{- if ne $key "environmentConfig" }}
                   {{ $key }}: {{ toJson $value }}
+                  {{- end }}
                   {{- end }}
                   {{- end }}
                   {{- if $env }}
@@ -240,6 +262,12 @@ spec:
                     resourcePrefix: {{ toJson (index $tags "Environment") }}
                     {{- end }}
                     {{- end }}
+                    {{- end }}
+                    {{- end }}
+                    {{- /* User-provided environmentConfig values override injected values (YAML last key wins) */ -}}
+                    {{- if $userEnvConfig }}
+                    {{- range $key, $value := $userEnvConfig }}
+                    {{ $key }}: {{ toJson $value }}
                     {{- end }}
                     {{- end }}
                   {{- end }}
