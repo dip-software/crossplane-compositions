@@ -50,9 +50,9 @@ spec:
         template: |
           {{- /* Define supported environment variables for substitution */ -}}
           {{- $supportedEnvVars := list "resourcePrefix" "clusterFqdn" "accountId" "region" "partition" "oidcProvider" "oidcProviderArn" -}}
-          
-          {{- /* Function to replace ${variableName} in a string with environment config values */ -}}
-          {{- define "replaceEnvVars" -}}
+          {{- $env := index .context "apiextensions.crossplane.io/environment" }}
+          {{- /* Helper to apply variable substitution to a string */ -}}
+          {{- define "substituteVars" -}}
             {{- $value := index . "value" -}}
             {{- $env := index . "env" -}}
             {{- $supportedVars := index . "supportedVars" -}}
@@ -66,7 +66,6 @@ spec:
             {{- end -}}
             {{- $result -}}
           {{- end -}}
-          
           apiVersion: argoproj.io/v1alpha1
           kind: Application
           metadata:
@@ -75,12 +74,12 @@ spec:
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: argocd-app
               {{- range $key, $value := .observed.composite.resource.metadata.annotations }}
-              {{ $key }}: {{ $value | quote }}
+              {{ $key }}: {{ include "substituteVars" (dict "value" $value "env" $env "supportedVars" $supportedEnvVars) | quote }}
               {{- end }}
             finalizers:
             - resources-finalizer.argocd.argoproj.io
           spec:
-            project: {{ default "default" .observed.composite.resource.spec.project }}
+            project: {{ include "substituteVars" (dict "value" (default "default" .observed.composite.resource.spec.project) "env" $env "supportedVars" $supportedEnvVars) }}
             {{- if .observed.composite.resource.spec.revisionHistoryLimit }}
             revisionHistoryLimit: {{ .observed.composite.resource.spec.revisionHistoryLimit }}
             {{- end }}
@@ -92,10 +91,10 @@ spec:
               group: {{ .group | quote }}
               {{- end }}
               {{- if .name }}
-              name: {{ .name }}
+              name: {{ include "substituteVars" (dict "value" .name "env" $env "supportedVars" $supportedEnvVars) }}
               {{- end }}
               {{- if .namespace }}
-              namespace: {{ .namespace }}
+              namespace: {{ include "substituteVars" (dict "value" .namespace "env" $env "supportedVars" $supportedEnvVars) }}
               {{- end }}
               {{- if .jsonPointers }}
               jsonPointers:
@@ -118,18 +117,18 @@ spec:
             {{- end }}
             {{- end }}
             source:
-              repoURL: {{ .observed.composite.resource.spec.source.repoURL }}
-              targetRevision: {{ .observed.composite.resource.spec.source.targetRevision }}
-              {{- if and .observed.composite.resource.spec.source.chart (not (hasPrefix "oci://" .observed.composite.resource.spec.source.repoURL)) }}
-              chart: {{ .observed.composite.resource.spec.source.chart }}
+              {{- $repoURL := include "substituteVars" (dict "value" .observed.composite.resource.spec.source.repoURL "env" $env "supportedVars" $supportedEnvVars) }}
+              repoURL: {{ $repoURL }}
+              targetRevision: {{ include "substituteVars" (dict "value" .observed.composite.resource.spec.source.targetRevision "env" $env "supportedVars" $supportedEnvVars) }}
+              {{- if and .observed.composite.resource.spec.source.chart (not (hasPrefix "oci://" $repoURL)) }}
+              chart: {{ include "substituteVars" (dict "value" .observed.composite.resource.spec.source.chart "env" $env "supportedVars" $supportedEnvVars) }}
               {{- end }}
               {{- if .observed.composite.resource.spec.source.path }}
-              path: {{ .observed.composite.resource.spec.source.path }}
+              path: {{ include "substituteVars" (dict "value" .observed.composite.resource.spec.source.path "env" $env "supportedVars" $supportedEnvVars) }}
               {{- end }}
               helm:
-                releaseName: {{ default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName }}
+                releaseName: {{ include "substituteVars" (dict "value" (default .observed.composite.resource.metadata.name .observed.composite.resource.spec.source.helm.releaseName) "env" $env "supportedVars" $supportedEnvVars) }}
                 {{- $userValues := .observed.composite.resource.spec.source.helm.valuesObject }}
-                {{- $env := index .context "apiextensions.crossplane.io/environment" }}
                 {{- /* Extract user's environmentConfig for later merging */ -}}
                 {{- $userEnvConfig := dict }}
                 {{- if $userValues }}
@@ -274,7 +273,11 @@ spec:
                 {{- end }}
             destination:
               server: https://kubernetes.default.svc
-              namespace: {{ if .observed.composite.resource.spec.destination }}{{ default .observed.composite.resource.metadata.namespace .observed.composite.resource.spec.destination.namespace }}{{ else }}{{ .observed.composite.resource.metadata.namespace }}{{ end }}
+              {{- $destNs := .observed.composite.resource.metadata.namespace }}
+              {{- if .observed.composite.resource.spec.destination }}
+              {{- $destNs = default .observed.composite.resource.metadata.namespace .observed.composite.resource.spec.destination.namespace }}
+              {{- end }}
+              namespace: {{ include "substituteVars" (dict "value" $destNs "env" $env "supportedVars" $supportedEnvVars) }}
             syncPolicy:
               {{- if .observed.composite.resource.spec.syncPolicy }}
               {{- $syncPolicy := .observed.composite.resource.spec.syncPolicy }}
@@ -296,13 +299,13 @@ spec:
                 {{- if $syncPolicy.managedNamespaceMetadata.labels }}
                 labels:
                   {{- range $key, $value := $syncPolicy.managedNamespaceMetadata.labels }}
-                  {{ $key }}: {{ $value | quote }}
+                  {{ $key }}: {{ include "substituteVars" (dict "value" $value "env" $env "supportedVars" $supportedEnvVars) | quote }}
                   {{- end }}
                 {{- end }}
                 {{- if $syncPolicy.managedNamespaceMetadata.annotations }}
                 annotations:
                   {{- range $key, $value := $syncPolicy.managedNamespaceMetadata.annotations }}
-                  {{ $key }}: {{ $value | quote }}
+                  {{ $key }}: {{ include "substituteVars" (dict "value" $value "env" $env "supportedVars" $supportedEnvVars) | quote }}
                   {{- end }}
                 {{- end }}
               {{- end }}

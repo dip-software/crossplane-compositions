@@ -1,0 +1,41 @@
+apiVersion: dip.io/v1alpha1
+kind: HelmApplication
+metadata:
+  name: test-variable-substitution
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # Test: variable substitution in annotation values
+    example.com/role-arn: "arn:${partition}:iam::${accountId}:role/my-role"
+spec:
+  # Test: variable substitution in project
+  project: "${resourcePrefix}-project"
+  source:
+    # Test: variable substitution in repoURL
+    repoURL: "oci://${accountId}.dkr.ecr.${region}.amazonaws.com/charts"
+    # Test: variable substitution in targetRevision
+    targetRevision: "1.0.0"
+    # Test: variable substitution in path (for git repos)
+    # path: "charts/${region}/myapp"
+    helm:
+      # Test: variable substitution in releaseName
+      releaseName: "${resourcePrefix}-myapp"
+      valuesObject:
+        replicaCount: 1
+  destination:
+    # Test: variable substitution in namespace
+    namespace: "${resourcePrefix}-myapp"
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        # Test: variable substitution in labels
+        environment: "${resourcePrefix}"
+      annotations:
+        # Test: variable substitution in annotations
+        eks.amazonaws.com/role-arn: "arn:${partition}:iam::${accountId}:role/${resourcePrefix}-role"
+  ignoreDifferences:
+    - kind: Secret
+      # Test: variable substitution in ignoreDifferences name
+      name: "${resourcePrefix}-secret"
+      jsonPointers:
+        - /data
