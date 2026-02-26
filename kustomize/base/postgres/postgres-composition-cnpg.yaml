@@ -102,15 +102,6 @@ spec:
             {{- $cnpgInstances = 3 }}
           {{- end }}
           
-          {{- /* Map AWS storage types to K8s StorageClasses (simplistic mapping) */ -}}
-          {{- $cnpgStorageClass := "standard" }}
-          {{- if eq $dbStorageType "gp3" }}
-             {{- $cnpgStorageClass = "gp3-encrypted" }}
-          {{- end }}
-          {{- if eq $dbStorageType "io1" }}
-             {{- $cnpgStorageClass = "io1" }}
-          {{- end }}
-          
           ---
           apiVersion: postgresql.cnpg.io/v1
           kind: Cluster
@@ -143,7 +134,6 @@ spec:
             # Storage configuration
             storage:
               size: {{ $dbAllocatedStorage }}Gi
-              storageClass: {{ $cnpgStorageClass }}
             
             # Resource Requirements
             resources:
